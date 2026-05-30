@@ -7,6 +7,39 @@
 
 #define MAX_ASSIGN_PASSES 8
 
+/* Assignment policy is module-level so the menu can set it without threading a
+ * parameter through every scheduling call site. Default keeps the old behavior. */
+static AssignPolicy g_assign_policy = ASSIGN_EARLIEST_FREE;
+
+void         assign_set_policy(AssignPolicy policy) { g_assign_policy = policy; }
+AssignPolicy assign_get_policy(void)                { return g_assign_policy; }
+
+static int popcount32(uint32_t x) {
+    int n = 0;
+    while (x) { x &= x - 1; n++; }
+    return n;
+}
+
+/* Build a 4-element ranking key (lower is better) from a candidate's metrics,
+ * ordered by policy. The trailing member id makes ties deterministic. */
+static void score_key(AssignPolicy pol, int free_day, int load, int surplus,
+                      int id, int key[4]) {
+    switch (pol) {
+        case ASSIGN_BALANCED:  key[0] = load;    key[1] = free_day; key[2] = surplus; break;
+        case ASSIGN_BEST_FIT:  key[0] = surplus; key[1] = free_day; key[2] = load;    break;
+        case ASSIGN_EARLIEST_FREE:
+        default:               key[0] = free_day; key[1] = load;    key[2] = surplus; break;
+    }
+    key[3] = id;
+}
+
+static int key_less(const int a[4], const int b[4]) {
+    int i;
+    for (i = 0; i < 4; i++)
+        if (a[i] != b[i]) return a[i] < b[i];
+    return 0;
+}
+
 /* =========================================================================
  * Topological sort - Kahn's algorithm
  * Considers both pre_ids (logical) and work_pre_ids (resource) edges.
@@ -218,21 +251,26 @@ static void sort_tasks_by_start(Task **sorted, Task **src, int n) {
     qsort(sorted, n, sizeof(Task *), cmp_by_sched_start);
 }
 
-/* Returns index into c->members[] of the best available qualified member,
- * or -1 if no qualified member is on the project roster. */
-static int find_best_member(const Company *c, const Project *p,
-                             const Task *t, const int *member_free_day) {
-    int j, best_mi = -1, best_free = 0x7fffffff;
+/* Returns index into c->members[] of the best qualified member under the active
+ * policy, or -1 if no qualified member is on the project roster. Ranks on free
+ * day, current workload (member_load), and skill surplus (extra skills beyond
+ * what the task needs - lower keeps generalists available). */
+static int find_best_member(const Company *c, const Project *p, const Task *t,
+                            const int *member_free_day, const int *member_load,
+                            AssignPolicy policy) {
+    int j, best_mi = -1, best_key[4];
     for (j = 0; j < p->member_ids.count; j++) {
         TeamMember *m = company_find_member((Company *)c, p->member_ids.data[j]);
-        int mi;
+        int mi, surplus, key[4];
         if (!m || !team_member_has_skills(m, t->required_skills)) continue;
         for (mi = 0; mi < c->member_count; mi++)
             if (c->members[mi]->id == m->id) break;
         if (mi == c->member_count) continue;
-        if (member_free_day[mi] < best_free) {
-            best_free = member_free_day[mi];
-            best_mi   = mi;
+        surplus = popcount32(m->skills & ~t->required_skills);
+        score_key(policy, member_free_day[mi], member_load[mi], surplus, m->id, key);
+        if (best_mi == -1 || key_less(key, best_key)) {
+            memcpy(best_key, key, sizeof best_key);
+            best_mi = mi;
         }
     }
     return best_mi;
@@ -317,13 +355,15 @@ static void compute_external_floor(const Company *c, int project_idx, int *floor
  * member_free_day is seeded from the cross-project floor so a member committed
  * elsewhere is not booked from day 0 here. */
 static int assignment_pass(Company *c, Project *p, Task **sorted,
-                            const int *floor,
-                            int *member_free_day, int *member_last_task) {
+                            const int *floor, AssignPolicy policy,
+                            int *member_free_day, int *member_last_task,
+                            int *member_load) {
     int i, j, all_assigned = 1;
 
     for (i = 0; i < c->member_count; i++) {
         member_free_day[i]  = floor[i];
         member_last_task[i] = -1;
+        member_load[i]      = 0;
     }
 
     for (i = 0; i < p->task_count; i++) {
@@ -337,12 +377,13 @@ static int assignment_pass(Company *c, Project *p, Task **sorted,
                     t->min_start        = floor[j];   /* pinned task still waits on other projects */
                     member_free_day[j]  = t->sched_end;
                     member_last_task[j] = t->id;
+                    member_load[j]++;
                     break;
                 }
             continue;
         }
 
-        best_mi = find_best_member(c, p, t, member_free_day);
+        best_mi = find_best_member(c, p, t, member_free_day, member_load, policy);
 
         if (best_mi == -1) { all_assigned = 0; continue; }
 
@@ -351,6 +392,7 @@ static int assignment_pass(Company *c, Project *p, Task **sorted,
         t->assignee_id = c->members[best_mi]->id;
         t->min_start   = floor[best_mi];   /* cross-project earliest-start floor */
         update_member_state(t, best_mi, member_free_day, member_last_task);
+        member_load[best_mi]++;
     }
     return all_assigned;
 }
@@ -424,7 +466,9 @@ void assign_members_greedy(Company *c, int project_idx, ScheduleStrategy strateg
     int       pass, prev_assigned;
     int      *member_free_day;
     int      *member_last_task;
+    int      *member_load;
     int      *external_floor;
+    AssignPolicy policy = g_assign_policy;
     Task    **sorted;
 
     if (project_idx < 0 || project_idx >= c->project_count) return;
@@ -440,11 +484,13 @@ void assign_members_greedy(Company *c, int project_idx, ScheduleStrategy strateg
 
     member_free_day  = (int *)calloc(c->member_count, sizeof(int));
     member_last_task = (int *)malloc(c->member_count * sizeof(int));
+    member_load      = (int *)calloc(c->member_count, sizeof(int));
     external_floor   = (int *)calloc(c->member_count, sizeof(int));
     sorted           = (Task **)malloc(p->task_count * sizeof(Task *));
 
-    if (!member_free_day || !member_last_task || !external_floor || !sorted) {
-        free(member_free_day); free(member_last_task); free(external_floor); free(sorted);
+    if (!member_free_day || !member_last_task || !member_load || !external_floor || !sorted) {
+        free(member_free_day); free(member_last_task); free(member_load);
+        free(external_floor); free(sorted);
         return;
     }
 
@@ -456,7 +502,8 @@ void assign_members_greedy(Company *c, int project_idx, ScheduleStrategy strateg
     for (pass = 0; pass < MAX_ASSIGN_PASSES; pass++) {
         int assigned_count = 0, i;
         sort_tasks_by_start(sorted, p->tasks, p->task_count);
-        if (assignment_pass(c, p, sorted, external_floor, member_free_day, member_last_task)) break;
+        if (assignment_pass(c, p, sorted, external_floor, policy,
+                            member_free_day, member_last_task, member_load)) break;
         for (i = 0; i < p->task_count; i++)
             if (p->tasks[i]->assignee_id != -1) assigned_count++;
         if (assigned_count == prev_assigned) break;  /* no progress - stop */
@@ -472,6 +519,7 @@ void assign_members_greedy(Company *c, int project_idx, ScheduleStrategy strateg
 
     free(member_free_day);
     free(member_last_task);
+    free(member_load);
     free(external_floor);
     free(sorted);
 }

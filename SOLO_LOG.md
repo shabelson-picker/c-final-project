@@ -50,3 +50,10 @@ No push; stay in fin-project/; no edits to .memory/CLAUDE.md/master course; ASCI
   * Policy: scheduling project P treats already-committed projects as immovable and serializes P after them (greedy, deterministic). find_best_member naturally prefers a less-committed qualified member (lower free day) -> also load-balances across projects.
   * Verification: tests/test_calendar.c (pure in-memory, no disk) via tests/run_test.ps1 (compiles all src/*.c minus main.c + harness). One backend specialist across 3 projects: A abs 0..5, B serialized to abs 5..11, C (start +3 days) accumulates A+B -> abs 11, C-frame day 8..12. All 9 asserts PASS. Build 0/0.
   Next: item 2 (scheduling/assignment policies).
+- 2026-05-31 ~03:05 ISR: Item 2 (assignment policies) DONE + TESTED.
+  * Added AssignPolicy {EARLIEST_FREE, BALANCED, BEST_FIT} + module-level g_assign_policy with assign_set_policy/get (algorithms.h/.c). Module-level (not threaded) so menus need no signature churn across resolve_unassigned + 2 call sites.
+  * One comparator, three orderings: 4-int lexicographic key (lower=better) built by score_key() from (free_day, member_load, skill-surplus, member-id). EARLIEST_FREE=free first (tight makespan, default/unchanged behavior); BALANCED=load first (spread); BEST_FIT=surplus first (specialists first, keep generalists free). surplus = popcount32(skills & ~required).
+  * Threaded member_load[] (tasks assigned this pass) through assignment_pass alongside member_free_day; incremented on both greedy and pinned-sync assigns. find_best_member now takes (member_load, policy).
+  * Menu: schedule Generate prompts policy after strategy; invalid -> EARLIEST_FREE.
+  * Verified tests/test_policy.c: specialist + generalist, 2 independent backend tasks. EARLIEST_FREE & BALANCED spread one each (makespan 5); BEST_FIT stacks both on the specialist (makespan 10), generalist idle. 9/9 pass. test_calendar still green (no regression). Build 0/0.
+  Next: item 3 (vacations as time-locked member blocks).

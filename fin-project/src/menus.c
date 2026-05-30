@@ -618,6 +618,16 @@ static int schedule_handler(void *ctx, int choice) {
             s = (strat == 1) ? SCHED_EARLIEST_DEADLINE
               : (strat == 2) ? SCHED_RISK_WEIGHTED_CRITICAL
               : SCHED_PESSIMISTIC;
+            {
+                int pol;
+                printf("  1. Earliest-free (tight schedule)   2. Balanced workload   3. Best skill-fit\n");
+                if (read_nav("  Assignment policy: ", &pol) == 1 && pol >= 1 && pol <= 3)
+                    assign_set_policy(pol == 2 ? ASSIGN_BALANCED
+                                    : pol == 3 ? ASSIGN_BEST_FIT
+                                    : ASSIGN_EARLIEST_FREE);
+                else
+                    assign_set_policy(ASSIGN_EARLIEST_FREE);
+            }
             assign_members_greedy(g_sched_company, g_sched_project_idx, s);
             schedule_project(p, s);
             render_gantt(p, g_sched_company, GANTT_WIDTH);

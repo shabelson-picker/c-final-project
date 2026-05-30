@@ -10,6 +10,23 @@ typedef enum {
     SCHED_PESSIMISTIC
 } ScheduleStrategy;
 
+/* How greedy assignment ranks qualified members for a task. All three use the
+ * same keys (availability, current workload, skill-fit surplus, member id) in a
+ * different priority order:
+ *  - EARLIEST_FREE: free day first  -> tightest makespan (default).
+ *  - BALANCED:      workload first   -> spread work evenly across the team.
+ *  - BEST_FIT:      skill surplus first -> specialists first, keep generalists free. */
+typedef enum {
+    ASSIGN_EARLIEST_FREE,
+    ASSIGN_BALANCED,
+    ASSIGN_BEST_FIT
+} AssignPolicy;
+
+/* Set / get the policy used by the next assign_members_greedy run.
+ * Module-level so callers need not thread it through every layer. */
+void          assign_set_policy(AssignPolicy policy);
+AssignPolicy  assign_get_policy(void);
+
 /* ---- CPM scheduling pipeline -------------------------------------------- */
 
 /* Topological sort considering logical (pre_ids) and resource (work_pre_ids)
