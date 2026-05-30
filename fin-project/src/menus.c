@@ -909,6 +909,34 @@ static void menu_company_projects(Company *c) {
 
 /* ---- company top-level menu --------------------------------------------- */
 
+/* VIEW_OWN realization: every assignment for one member, across all projects. */
+static void show_my_tasks(Company *c) {
+    int mid, i, j, found = 0;
+    TeamMember *m;
+    if (c->member_count == 0) { cprintf(C_DIM, "  No members.\n"); return; }
+    printf("  Members:\n");
+    for (i = 0; i < c->member_count; i++)
+        printf("    [%d] %s (%s)\n", c->members[i]->id, c->members[i]->name, c->members[i]->role);
+    if (read_int("  Your member id: ", &mid) == -1) return;
+    m = company_find_member(c, mid);
+    if (!m) { cprintf(C_RED, "  No such member.\n"); return; }
+
+    cprintf(C_BOLD, "\n  Tasks assigned to %s, across all projects:\n", m->name);
+    for (i = 0; i < c->project_count; i++) {
+        Project *p = c->projects[i];
+        for (j = 0; j < p->task_count; j++) {
+            Task *t = p->tasks[j];
+            if (t->assignee_id != mid) continue;
+            cprintf(t->is_critical ? C_RED : C_RESET,
+                    "    %-18.18s  %-24.24s  day %d..%d%s\n",
+                    p->name, t->title, t->sched_start, t->sched_end,
+                    t->is_critical ? "  [CRITICAL]" : "");
+            found = 1;
+        }
+    }
+    if (!found) cprintf(C_DIM, "    (no assignments)\n");
+}
+
 static void company_render(void *ctx) { company_print_summary((Company *)ctx); }
 
 /* The rules. */
@@ -927,6 +955,7 @@ static int company_handler(void *ctx, int choice) {
         case 2: if (priv_require(PRIV_ADMIN))          menu_company_team(c);     break;
         case 3: company_save(c); cprintf(C_GREEN, "  Saved to %s\n", c->save_dir); break;
         case 4: if (priv_require(PRIV_VIEW_PORTFOLIO)) render_portfolio_gantt(c, GANTT_WIDTH); break;
+        case 5: if (priv_require(PRIV_VIEW_OWN))       show_my_tasks(c); break;
         case 1999: project_mayhem_rules(); break;  /* easter egg (undocumented) */
     }
     return 0;
@@ -934,6 +963,6 @@ static int company_handler(void *ctx, int choice) {
 
 void menu_company(Company *c) {
     crumb_push(c->name);
-    run_menu(c, company_render, "  1. Projects    2. Team    3. Save    4. Portfolio    0. Exit", company_handler);
+    run_menu(c, company_render, "  1. Projects    2. Team    3. Save    4. Portfolio    5. My tasks    0. Exit", company_handler);
     crumb_pop();
 }

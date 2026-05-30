@@ -35,6 +35,12 @@ void       milestone_destroy(Milestone *m);
 /// <returns>1 on success, 0 on allocation failure.</returns>
 int        milestone_add_task(Milestone *m, int task_id);
 
+/// <summary>Detach a task ID from the milestone (swap-remove).</summary>
+/// <param name="m">Milestone.</param>
+/// <param name="task_id">Task ID to remove.</param>
+/// <returns>1 if removed, 0 if not present.</returns>
+int        milestone_remove_task(Milestone *m, int task_id);
+
 /// <summary>Print a one-line summary of the milestone to stdout.</summary>
 /// <param name="m">Milestone to print.</param>
 void       milestone_print(const Milestone *m);

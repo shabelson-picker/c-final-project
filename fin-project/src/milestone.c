@@ -30,6 +30,17 @@ int milestone_add_task(Milestone *m, int task_id) {
     return 1;
 }
 
+int milestone_remove_task(Milestone *m, int task_id) {
+    int i;
+    for (i = 0; i < m->task_count; i++) {
+        if (m->task_ids[i] == task_id) {
+            m->task_ids[i] = m->task_ids[--m->task_count];  /* swap-remove (order irrelevant) */
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void milestone_print(const Milestone *m) {
     printf("[M%d] %-30s  deadline: day %-4d  priority: %d  tasks: %d\n",
            m->id, m->name, m->deadline_day, m->priority, m->task_count);

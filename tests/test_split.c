@@ -57,6 +57,25 @@ int main(void) {
     check("Y starts 12", y->sched_start, 12);
     check("Y ends 15 (makespan preserved)", y->sched_end, 15);
 
+    /* milestone (completion marker) moves to the finishing half, and part 1 is
+     * detached from the milestone's task list (extrapolation fix #6). */
+    {
+        Project  *pm = company_add_project(c, "MS", mkdate(2026,1,1));
+        Task     *t  = project_add_task(pm, "T", ""); task_set_pert(t, 8,8,8);
+        Milestone*ms = project_add_milestone(pm, "M", 8, 1);
+        int tid = t->id, k, has_t, has_b2;
+        Task *b2;
+        project_link_task_milestone(pm, tid, ms->id);
+        b2 = project_split_task(pm, tid, 0.5f);
+        has_t = has_b2 = 0;
+        for (k = 0; k < ms->task_count; k++) {
+            if (ms->task_ids[k] == tid)      has_t  = 1;
+            if (b2 && ms->task_ids[k] == b2->id) has_b2 = 1;
+        }
+        check("milestone now lists part 2",   has_b2, 1);
+        check("milestone dropped part 1",     has_t,  0);
+    }
+
     company_destroy(c);
     printf(g_fail ? "\nRESULT: FAIL\n" : "\nRESULT: PASS\n");
     return g_fail;

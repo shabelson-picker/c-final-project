@@ -302,6 +302,8 @@ Task* project_split_task(Project* p, int task_id, float first_fraction) {
 	/* milestone (completion marker) moves to the finishing half */
 	if (a->milestone_id != -1) {
 		int mid = a->milestone_id;
+		Milestone *ms = project_find_milestone(p, mid);
+		if (ms) milestone_remove_task(ms, a->id);   /* detach part 1 */
 		a->milestone_id = -1;
 		project_link_task_milestone(p, b->id, mid);
 	}

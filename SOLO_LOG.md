@@ -91,3 +91,8 @@ No push; stay in fin-project/; no edits to .memory/CLAUDE.md/master course; ASCI
   * Fields added to Project {by_id,cap,dirty} and Company {mem_by_id,...}; freed in destroy; dirty set in create/add/remove.
   * Verified tests/test_index.c (16 asserts): find after add, after swap-remove, after split, absent-id -> NULL, sentinels, members add/remove. Crucially ALL 6 suites still green - the scheduler hammers find_task, so behavior-preservation is proven. Build 0/0.
   ROADMAP ITEMS 0-7 ALL COMPLETE + TESTED. Next: write the extrapolation (done condition).
+- 2026-05-31 ~05:15 ISR: Done condition met -> wrote EXTRAPOLATION.md (forward-look grounded in observed limitations). Then, per "reach as far as you can", started on the low-risk completeness items it flagged (deliberately NOT the risky calendar-v2 scheduler refactor near the time boundary - documented as deferred).
+- 2026-05-31 ~05:30 ISR: Post-roadmap items DONE + TESTED.
+  * #6 milestone-on-split fix: added milestone_remove_task (milestone.c/.h); project_split_task now detaches part 1 from the milestone before attaching part 2. Verified in test_split.c (milestone lists part 2, not part 1).
+  * #4 VIEW_OWN realized: company menu option 5 "My tasks" (gated PRIV_VIEW_OWN) lists a member's assignments across ALL projects with schedule + critical flag - turns the defined-but-unused privilege into an actual view. (UI; build-verified + priv_require unit-tested.)
+  All 6 suites green; build 0/0.
