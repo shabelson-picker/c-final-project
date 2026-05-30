@@ -28,6 +28,13 @@ void render_gantt_html(FILE *out, const Project *p, const Company *c, int width)
 void render_portfolio_gantt(const Company *c, int width);
 
 /*
+ * Unified company Gantt - one row per task across ALL projects on a shared
+ * absolute-date timeline, each task's bar colored by its project (with a legend).
+ * Tasks of projects without a valid start_date are skipped.
+ */
+void render_company_gantt(const Company *c, int width);
+
+/*
  * DAG view - ASCII dependency graph.
  * Nodes are task IDs/titles; edges show pre->post relationships.
  */

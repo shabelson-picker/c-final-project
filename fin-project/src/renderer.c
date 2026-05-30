@@ -294,6 +294,84 @@ void render_portfolio_gantt(const Company *c, int width) {
     printf("\n");
 }
 
+/* ---- Unified company task Gantt ----------------------------------------- */
+
+/* One color per project (cycled). */
+static const char *PROJ_PALETTE[] = {
+    ANSI_CYAN, ANSI_GREEN, ANSI_YELLOW, ANSI_RED, "\033[35m", "\033[34m"
+};
+#define PROJ_PALETTE_N ((int)(sizeof PROJ_PALETTE / sizeof PROJ_PALETTE[0]))
+
+/* Every task of every project on one shared absolute-date timeline, each task's
+ * bar drawn in its project's color. Tasks of projects without a valid start_date
+ * are skipped (they have no place on a calendar). */
+void render_company_gantt(const Company *c, int width) {
+    long t0 = 0, t1 = 0;
+    long span;
+    int  i, j, k, datable = 0, rows = 0;
+
+    if (c->project_count == 0) { printf("%sNo projects.%s\n", ANSI_DIM, ANSI_RESET); return; }
+
+    /* Pass 1: absolute timeline bounds over all tasks of datable projects. */
+    for (i = 0; i < c->project_count; i++) {
+        Project *p = c->projects[i];
+        long sa;
+        if (!date_is_valid(p->start_date)) continue;
+        sa = date_to_days(p->start_date);
+        for (j = 0; j < p->task_count; j++) {
+            long s = sa + p->tasks[j]->sched_start;
+            long e = sa + p->tasks[j]->sched_end;
+            if (datable == 0) { t0 = s; t1 = e; }
+            else { if (s < t0) t0 = s; if (e > t1) t1 = e; }
+            datable++;
+            rows++;
+        }
+    }
+
+    span = t1 - t0;
+    if (span <= 0) span = 1;
+
+    printf("\n%s=== All Tasks - Company Timeline (%d tasks, %d days) ===%s\n",
+           ANSI_BOLD, rows, (int)(t1 - t0), ANSI_RESET);
+    printf("%-14s  %-16s  |", "Project", "Task");
+    for (j = 0; j < width; j++) printf(j % 10 == 0 ? "|" : "-");
+    printf("\n");
+
+    /* Rows: one per task, colored by project. */
+    for (i = 0; i < c->project_count; i++) {
+        Project    *p     = c->projects[i];
+        const char *color = PROJ_PALETTE[i % PROJ_PALETTE_N];
+        long sa;
+        if (!date_is_valid(p->start_date)) continue;
+        sa = date_to_days(p->start_date);
+        for (j = 0; j < p->task_count; j++) {
+            Task *t = p->tasks[j];
+            int col_start = (int)((sa + t->sched_start - t0) * width / span);
+            int col_end   = (int)((sa + t->sched_end   - t0) * width / span);
+            if (col_start < 0)        col_start = 0;
+            if (col_start > width - 1) col_start = width - 1;
+            if (col_end   < 0)        col_end   = 0;
+            if (col_end   > width - 1) col_end   = width - 1;
+            if (col_end < col_start)  col_end   = col_start;
+
+            printf("%s%-14.14s%s  %-16.16s  |", color, p->name, ANSI_RESET, t->title);
+            for (k = 0; k < width; k++) {
+                if (k >= col_start && k <= col_end) printf("%s#%s", color, ANSI_RESET);
+                else                                printf(" ");
+            }
+            printf("\n");
+        }
+    }
+
+    /* Legend: project -> color swatch. */
+    printf("\n  Legend: ");
+    for (i = 0; i < c->project_count; i++) {
+        if (!date_is_valid(c->projects[i]->start_date)) continue;
+        printf("%s##%s %.12s   ", PROJ_PALETTE[i % PROJ_PALETTE_N], ANSI_RESET, c->projects[i]->name);
+    }
+    printf("\n");
+}
+
 /* ---- Task dependency chart ---------------------------------------------- */
 
 #define PRE_COL  26

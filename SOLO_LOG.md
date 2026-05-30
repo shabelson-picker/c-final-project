@@ -96,3 +96,9 @@ No push; stay in fin-project/; no edits to .memory/CLAUDE.md/master course; ASCI
   * #6 milestone-on-split fix: added milestone_remove_task (milestone.c/.h); project_split_task now detaches part 1 from the milestone before attaching part 2. Verified in test_split.c (milestone lists part 2, not part 1).
   * #4 VIEW_OWN realized: company menu option 5 "My tasks" (gated PRIV_VIEW_OWN) lists a member's assignments across ALL projects with schedule + critical flag - turns the defined-but-unused privilege into an actual view. (UI; build-verified + priv_require unit-tested.)
   All 6 suites green; build 0/0.
+- 2026-05-31 ~05:50 ISR: User-directed additions (interactive session) DONE + TESTED.
+  * Selectable role menu: choose_role() (main.c) now lists each role WITH its privilege summary (print_privs) and LOOPS until a valid selection (re-prompts on bad input; empty/EOF -> System Admin) instead of silently defaulting.
+  * Role in breadcrumb: crumb_draw() (menus.c) shows "[role: <name>]" next to the title bar on every screen (roles_current_name()).
+  * Unified company task Gantt: render_company_gantt (renderer.c/.h) - one row per task across ALL projects on a shared absolute-date timeline, each bar colored by its project (6-color cycle) + a legend. Company menu option 6 "All-task Gantt" (gated VIEW_PORTFOLIO). Verified tests/test_company_gantt.c (visual): 4 tasks/2 projects, Apollo cyan cols 0..26, Borealis (+9d) green cols 30..49, 15-day span, legend correct.
+  * (Build gotcha: a lingering exe from a smoke run locked fin-project.exe -> LNK1104; killed the process and rebuilt clean.)
+  All 6 assert suites still green; build 0/0.
