@@ -224,6 +224,71 @@ int project_link_task_milestone(Project* p, int task_id, int milestone_id) {
 	return milestone_add_task(m, task_id);
 }
 
+Task* project_split_task(Project* p, int task_id, float first_fraction) {
+	Task* a = project_find_task(p, task_id);   /* becomes "part 1" */
+	Task* b;
+	int   i, n_succ = 0;
+	int  *succ = NULL;
+	char  title[MAX_TITLE_LEN];
+	float f = first_fraction;
+
+	if (!a || task_id == START_NODE_ID || task_id == END_NODE_ID) return NULL;
+	if (a->fixed_time) return NULL;            /* never split an immovable block (vacation) */
+	if (f < 0.1f) f = 0.1f;                    /* keep both halves non-trivial */
+	if (f > 0.9f) f = 0.9f;
+
+	/* Snapshot a's real successors (skip the END sentinel) before rewiring. */
+	if (a->post_ids.count > 0) {
+		succ = (int*)malloc((size_t)a->post_ids.count * sizeof(int));
+		if (!succ) return NULL;
+		for (i = 0; i < a->post_ids.count; i++)
+			if (a->post_ids.data[i] != END_NODE_ID)
+				succ[n_succ++] = a->post_ids.data[i];
+	}
+
+	/* part 2 inherits a's attributes; PERT split proportionally so the two halves
+	 * sum to the original estimate. */
+	snprintf(title, sizeof title, "%.*s (part 2)", MAX_TITLE_LEN - 12, a->title);
+	b = project_add_task(p, title, a->description);
+	if (!b) { free(succ); return NULL; }
+
+	task_set_pert(b, a->pert_min * (1.0f - f), a->pert_likely * (1.0f - f), a->pert_max * (1.0f - f));
+	task_set_risk(b, a->risk);
+	b->required_skills   = a->required_skills;
+	b->assignee_id       = a->assignee_id;
+	b->manually_assigned = a->manually_assigned;
+	b->status            = a->status;
+
+	/* shrink part 1 and tag its title */
+	task_set_pert(a, a->pert_min * f, a->pert_likely * f, a->pert_max * f);
+	{
+		char t1[MAX_TITLE_LEN];
+		snprintf(t1, sizeof t1, "%.*s (part 1)", MAX_TITLE_LEN - 12, a->title);
+		strncpy(a->title, t1, MAX_TITLE_LEN - 1);
+		a->title[MAX_TITLE_LEN - 1] = '\0';
+	}
+
+	/* milestone (completion marker) moves to the finishing half */
+	if (a->milestone_id != -1) {
+		int mid = a->milestone_id;
+		a->milestone_id = -1;
+		project_link_task_milestone(p, b->id, mid);
+	}
+
+	/* Rewire: a -> all its old successors becomes  a -> b -> (those successors). */
+	for (i = 0; i < n_succ; i++) {
+		Task* s = project_find_task(p, succ[i]);
+		if (!s) continue;
+		task_remove_post(a, succ[i]);
+		task_remove_pre(s, a->id);
+		project_link_tasks(p, b->id, succ[i]);   /* b -> s (handles sentinels) */
+	}
+	project_link_tasks(p, a->id, b->id);          /* a -> b */
+
+	free(succ);
+	return b;
+}
+
 static int project_find_cyclic_paths(const Project* p, int pre_id, int post_id, DynamicIntArray* visited, DynamicIntArray* path)
 {
 	if (pre_id == post_id)

@@ -109,6 +109,17 @@ int        project_link_tasks(Project *p, int pre_id, int post_id);
 /// <returns>1 on success, 0 if either was not found.</returns>
 int        project_link_task_milestone(Project *p, int task_id, int milestone_id);
 
+/// <summary>Split a task into two sequential halves: the task becomes "part 1"
+/// (duration scaled by first_fraction) and a new "part 2" task takes the remaining
+/// duration and the task's successors, chained part1 -> part2. PERT estimates are
+/// split proportionally; assignee/skills/status/milestone carry over. No preemption.
+/// fixed_time blocks (vacations) are never split.</summary>
+/// <param name="p">Project.</param>
+/// <param name="task_id">Task to split.</param>
+/// <param name="first_fraction">Share of the duration kept by part 1 (clamped to [0.1, 0.9]).</param>
+/// <returns>The new "part 2" task, or NULL on failure / invalid target.</returns>
+Task      *project_split_task(Project *p, int task_id, float first_fraction);
+
 /// <summary>Print a full text summary of the project (tasks + milestones) to stdout.</summary>
 /// <param name="p">Project.</param>
 void       project_print_summary(const Project *p);

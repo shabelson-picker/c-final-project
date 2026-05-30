@@ -460,6 +460,26 @@ static void manual_assign(Project *p) {
     autosave(p);
 }
 
+static void split_task_ui(Project *p) {
+    int id, pct;
+    Task *b, *t;
+    list_tasks(p);
+    if (read_int("  Task id to split: ", &id) == -1) return;
+    t = project_find_task(p, id);
+    if (!t || id < 1)   { cprintf(C_RED, "  No such task.\n"); return; }
+    if (t->fixed_time)  { cprintf(C_YELLOW, "  Cannot split a fixed-time (vacation) block.\n"); return; }
+    for (;;) {
+        int r = read_int("  Part 1 share, percent (10-90): ", &pct);
+        if (r == -1) return;
+        if (r == 0)  continue;
+        if (pct < 10 || pct > 90) { printf("  Must be 10-90.\n"); continue; }
+        break;
+    }
+    b = project_split_task(p, id, pct / 100.0f);
+    if (b) { cprintf(C_GREEN, "  Split done: part 1 = [%d], part 2 = [%d]. Reschedule to update the plan.\n", id, b->id); autosave(p); }
+    else     cprintf(C_RED, "  Split failed.\n");
+}
+
 static int tasks_handler(void *ctx, int choice) {
     Project *p = (Project *)ctx;
     switch (choice) {
@@ -472,6 +492,7 @@ static int tasks_handler(void *ctx, int choice) {
         case 6: if (priv_require(PRIV_EDIT_DEPS)) link_tasks(p);    break;
         case 7: menu_deps(p);     break;
         case 8: if (priv_require(PRIV_ASSIGN))    manual_assign(p); break;
+        case 9: if (priv_require(PRIV_EDIT_TASK)) split_task_ui(p); break;
     }
     return 0;
 }
@@ -479,7 +500,7 @@ static int tasks_handler(void *ctx, int choice) {
 void menu_tasks(Project *p) {
     crumb_push("Tasks");
     run_menu(p, NULL,
-             "  1. List    2. Add    3. Remove    4. Edit    5. Status    6. Link    7. Deps    8. Assign    0. Back",
+             "  1. List    2. Add    3. Remove    4. Edit    5. Status    6. Link    7. Deps    8. Assign    9. Split    0. Back",
              tasks_handler);
     crumb_pop();
 }
