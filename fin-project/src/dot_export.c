@@ -4,7 +4,7 @@
 #include "dot_export.h"
 #include "constants.h"
 
-int export_dot(const Project *p, const char *filename) {
+int dot_write(const Project *p, const char *filename) {
     int i, j;
     FILE *f = fopen(filename, "w");
     if (!f) { printf("  Could not write '%s'\n", filename); return 0; }
@@ -77,10 +77,14 @@ int export_dot(const Project *p, const char *filename) {
 
     fprintf(f, "}\n");
     fclose(f);
+    return 1;
+}
 
+/* Write the .dot, print confirmation, and open it in the default viewer. */
+int export_dot(const Project *p, const char *filename) {
+    if (!dot_write(p, filename)) return 0;
     printf("  Saved: %s\n", filename);
 
-    /* Open with default system viewer */
 #ifdef _WIN32
     {
         char cmd[512];

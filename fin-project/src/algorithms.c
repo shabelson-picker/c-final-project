@@ -164,7 +164,7 @@ void backward_pass(Project *p, const int *order, int n, ScheduleStrategy s) {
  * ========================================================================= */
 
 int schedule_project(Project *p, ScheduleStrategy strategy) {
-    int n;
+    int n, i;
     int *order = topo_sort(p, &n);
     if (!order) {
         fprintf(stderr, "[scheduler] cycle detected in task graph\n");
@@ -172,6 +172,7 @@ int schedule_project(Project *p, ScheduleStrategy strategy) {
     }
     forward_pass(p, order, n, strategy);
     backward_pass(p, order, n, strategy);
+    for (i = 0; i < n; i++) p->tasks[order[i]]->topo_order = i + 1;
     free(order);
     return 1;
 }

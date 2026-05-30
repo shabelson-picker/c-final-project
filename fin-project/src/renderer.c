@@ -4,7 +4,6 @@
 #include "renderer.h"
 #include "constants.h"
 #include "team.h"
-#include "algorithms.h"
 
 /* ANSI color codes */
 #define ANSI_RESET   "\033[0m"
@@ -63,21 +62,17 @@ static int cmp_gantt_row(const void *a, const void *b) {
 }
 
 void render_gantt(const Project *p, const Company *c, int width) {
-    int i, j, project_end = 0, n = 0;
+    int i, j, project_end = 0;
     char *bar  = (char *)malloc((size_t)(width + 1));
     char *kind = (char *)malloc((size_t)(width + 1));
-    int  *dag_order = (int *)malloc((size_t)(p->task_count ? p->task_count : 1) * sizeof(int));
-    int  *topo;
+    GanttRow *rows = (GanttRow *)malloc((size_t)(p->task_count ? p->task_count : 1) * sizeof(GanttRow));
 
-    if (!bar || !kind) { free(bar); free(kind); free(dag_order); return; }
+    if (!bar || !kind || !rows) { free(bar); free(kind); free(rows); return; }
 
-    /* DAG order: 1-based topological position per task (0 = not placed / cycle) */
-    if (dag_order)
-        for (i = 0; i < p->task_count; i++) dag_order[i] = 0;
-    topo = topo_sort((Project *)p, &n);
-    if (topo && dag_order)
-        for (i = 0; i < n; i++) dag_order[topo[i]] = i + 1;
-    free(topo);
+    /* Build display rows from the persisted DAG (topological) order; sorted by
+     * start day for display only (p->tasks untouched). */
+    for (i = 0; i < p->task_count; i++) { rows[i].t = p->tasks[i]; rows[i].dag = p->tasks[i]->topo_order; }
+    qsort(rows, (size_t)p->task_count, sizeof(GanttRow), cmp_gantt_row);
 
     /* Pass 1 - project end */
     for (i = 0; i < p->task_count; i++)
@@ -94,7 +89,7 @@ void render_gantt(const Project *p, const Company *c, int width) {
     printf("\n");
 
     for (i = 0; i < p->task_count; i++) {
-        Task       *t        = p->tasks[i];
+        Task       *t        = rows[i].t;
         const char *color    = t->is_critical ? ANSI_RED : ANSI_GREEN;
         TeamMember *assignee = (c && t->assignee_id != -1)
                                ? company_find_member((Company *)c, t->assignee_id)
@@ -108,8 +103,8 @@ void render_gantt(const Project *p, const Company *c, int width) {
         else                printf("%s%-14s%s  ", ANSI_DIM,    "[NOT CRITICAL]",  ANSI_RESET);
         if (assignee)       printf("%-18.18s  ", assignee->name);
         else                printf("%s%-18s%s  ", ANSI_YELLOW, "[UNASSIGNED]",    ANSI_RESET);
-        if (dag_order && dag_order[i] > 0) printf("%-4d |", dag_order[i]);
-        else                               printf("%-4s |", "-");
+        if (rows[i].dag > 0) printf("%-4d |", rows[i].dag);
+        else                 printf("%-4s |", "-");
 
         /* Bar */
         for (j = 0; j < width; j++) {
@@ -132,7 +127,85 @@ void render_gantt(const Project *p, const Company *c, int width) {
 
     free(bar);
     free(kind);
-    free(dag_order);
+    free(rows);
+}
+
+/* ---- Gantt chart (HTML) ------------------------------------------------- */
+
+/* Escape a string into an HTML stream (safe inside text and <pre>). */
+static void html_fputs(FILE *out, const char *s) {
+    for (; *s; s++) {
+        switch (*s) {
+            case '&': fputs("&amp;",  out); break;
+            case '<': fputs("&lt;",   out); break;
+            case '>': fputs("&gt;",   out); break;
+            case '"': fputs("&quot;", out); break;
+            default:  fputc(*s, out);       break;
+        }
+    }
+}
+
+void render_gantt_html(FILE *out, const Project *p, const Company *c, int width) {
+    int i, j, project_end = 0;
+    char *bar  = (char *)malloc((size_t)(width + 1));
+    char *kind = (char *)malloc((size_t)(width + 1));
+    GanttRow *rows = (GanttRow *)malloc((size_t)(p->task_count ? p->task_count : 1) * sizeof(GanttRow));
+
+    if (!bar || !kind || !rows) { free(bar); free(kind); free(rows); return; }
+
+    for (i = 0; i < p->task_count; i++) { rows[i].t = p->tasks[i]; rows[i].dag = p->tasks[i]->topo_order; }
+    qsort(rows, (size_t)p->task_count, sizeof(GanttRow), cmp_gantt_row);
+
+    for (i = 0; i < p->task_count; i++)
+        if (p->tasks[i]->sched_end > project_end)
+            project_end = p->tasks[i]->sched_end;
+
+    fprintf(out, "<h2>Gantt (duration: %d days)</h2>\n", project_end);
+    fprintf(out, "<p class=\"legend\"># optimistic &middot; ~ expected &middot; - pessimistic overrun</p>\n");
+    fprintf(out, "<pre class=\"gantt\">");
+
+    for (i = 0; i < p->task_count; i++) {
+        Task *t = rows[i].t;
+        const char *cls = t->is_critical ? "crit" : "noncrit";
+        TeamMember *a = (c && t->assignee_id != -1)
+                        ? company_find_member((Company *)c, t->assignee_id) : NULL;
+        char left[160], dag[8];
+
+        build_bar(t, project_end, width, bar, kind);
+
+        if (rows[i].dag > 0) snprintf(dag, sizeof(dag), "%d", rows[i].dag);
+        else                 snprintf(dag, sizeof(dag), "-");
+
+        /* left columns padded as raw text, then escaped (entities keep width in <pre>) */
+        snprintf(left, sizeof(left), "%-22.22s  %-14s  %-18.18s  %-4s |",
+                 t->title,
+                 t->is_critical ? "[CRITICAL]" : "[NOT CRITICAL]",
+                 a ? a->name : "[UNASSIGNED]",
+                 dag);
+        html_fputs(out, left);
+
+        /* bar: group consecutive same-kind cells into one styled span */
+        j = 0;
+        while (j < width) {
+            int k0 = kind[j], run = j;
+            while (run < width && kind[run] == k0) run++;
+            if (k0 == 0) {
+                for (; j < run; j++) fputc(' ', out);
+            } else {
+                const char *bcls = (k0 == 1) ? "opt" : (k0 == 2) ? "exp" : "pess";
+                fprintf(out, "<span class=\"%s %s\">", bcls, cls);
+                for (; j < run; j++) fputc(bar[j], out);
+                fputs("</span>", out);
+            }
+        }
+        fputc('\n', out);
+    }
+
+    fprintf(out, "</pre>\n");
+
+    free(bar);
+    free(kind);
+    free(rows);
 }
 
 /* ---- Task dependency chart ---------------------------------------------- */

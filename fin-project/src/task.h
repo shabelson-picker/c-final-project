@@ -35,6 +35,7 @@ typedef struct {
     int        latest_start;    /* latest allowable start (for slack)    */
     int        slack;           /* latest_start - sched_start            */
     int        is_critical;     /* 1 if on critical path                 */
+    int        topo_order;      /* 1-based topological position (0 = unscheduled) */
 } Task;
 
 /* Lifecycle */

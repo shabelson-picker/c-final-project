@@ -1,6 +1,7 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
+#include <stdio.h>
 #include "project.h"
 #include "company.h"
 
@@ -11,6 +12,12 @@
  * width: terminal character width for the timeline area.
  */
 void render_gantt(const Project *p, const Company *c, int width);
+
+/*
+ * Gantt chart as HTML, written to 'out'. Same rows/columns as render_gantt
+ * (sorted by start, with DAG order), but uses <span> classes instead of ANSI.
+ */
+void render_gantt_html(FILE *out, const Project *p, const Company *c, int width);
 
 /*
  * DAG view - ASCII dependency graph.

@@ -11,4 +11,7 @@
  */
 int export_dot(const Project *p, const char *filename);
 
+/* Write the Graphviz .dot to filename without opening it (for embedding). */
+int dot_write(const Project *p, const char *filename);
+
 #endif /* DOT_EXPORT_H */

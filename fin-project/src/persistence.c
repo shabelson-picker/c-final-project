@@ -115,6 +115,11 @@ static int save_project_meta(const Project* p, const char* dir) {
 			write_int(f, "required_skills", (int)t->required_skills, 4);
 			write_int(f, "assignee_id", t->assignee_id, 4);
 			write_int(f, "milestone_id", t->milestone_id, 4);
+			write_int(f, "sched_start", t->sched_start, 4);
+			write_int(f, "sched_end", t->sched_end, 4);
+			write_int(f, "slack", t->slack, 4);
+			write_int(f, "is_critical", t->is_critical, 4);
+			write_int(f, "topo_order", t->topo_order, 4);
 			write_int_array(f, "pre",      t->pre_ids.data,      t->pre_ids.count,      START_NODE_ID, 4);
 			write_int_array(f, "post",     t->post_ids.data,     t->post_ids.count,     END_NODE_ID,   4);
 			write_int_array(f, "alt",      t->alt_ids.data,      t->alt_ids.count,      -999,          4);
@@ -166,6 +171,11 @@ static void parse_task(Project* p, Task* t, const char* key, const char* val) {
 	else if (strcmp(key, "required_skills") == 0) t->required_skills = (uint32_t)strtol(val, NULL, 10);
 	else if (strcmp(key, "assignee_id") == 0) t->assignee_id = (int)strtol(val, NULL, 10);
 	else if (strcmp(key, "milestone_id") == 0) t->milestone_id = (int)strtol(val, NULL, 10);
+	else if (strcmp(key, "sched_start") == 0) t->sched_start = (int)strtol(val, NULL, 10);
+	else if (strcmp(key, "sched_end") == 0) t->sched_end = (int)strtol(val, NULL, 10);
+	else if (strcmp(key, "slack") == 0) t->slack = (int)strtol(val, NULL, 10);
+	else if (strcmp(key, "is_critical") == 0) t->is_critical = (int)strtol(val, NULL, 10);
+	else if (strcmp(key, "topo_order") == 0) t->topo_order = (int)strtol(val, NULL, 10);
 	else if (strcmp(key, "pre")      == 0) { int j; n = parse_int_array(val, ids, 64); for (j=0;j<n;j++) project_link_tasks(p, ids[j], t->id); }
 	else if (strcmp(key, "alt")      == 0) { int j; n = parse_int_array(val, ids, 64); for (j=0;j<n;j++) task_add_alt(t, ids[j]); }
 	else if (strcmp(key, "work_pre") == 0) { int j; n = parse_int_array(val, ids, 64); for (j=0;j<n;j++) dia_append(&t->work_pre_ids, ids[j]); }

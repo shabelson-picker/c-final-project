@@ -11,6 +11,7 @@
 #include "algorithms.h"
 #include "renderer.h"
 #include "dot_export.h"
+#include "report_exporter.h"
 #include "persistence.h"
 
 /* GANTT_WIDTH defined in constants.h */
@@ -504,10 +505,17 @@ static int schedule_handler(Project *p, int choice) {
         case 3: render_gantt(p, g_sched_company, GANTT_WIDTH); break;
         case 4: render_dag(p);            break;
         case 5: {
-            char dot_path[MAX_PATH_LEN], exe_dir[MAX_PATH_LEN];
-            get_exe_dir(exe_dir, MAX_PATH_LEN);
-            snprintf(dot_path, MAX_PATH_LEN, "%s%s.dot", exe_dir, p->name);
+            char dot_path[MAX_PATH_LEN];
+            const char *dir = p->save_dir[0] ? p->save_dir : ".";
+            snprintf(dot_path, MAX_PATH_LEN, "%s\\%s.dot", dir, p->name);
             export_dot(p, dot_path);
+            break;
+        }
+        case 6: {
+            char rep_path[MAX_PATH_LEN];
+            const char *dir = p->save_dir[0] ? p->save_dir : ".";
+            snprintf(rep_path, MAX_PATH_LEN, "%s\\%s_report.html", dir, p->name);
+            export_report_html(p, g_sched_company, rep_path);
             break;
         }
     }
@@ -521,8 +529,11 @@ void menu_schedule(Company *c, int project_idx) {
     g_sched_company     = c;
     g_sched_project_idx = project_idx;
     crumb_push("Schedule");
+    /* Show the Gantt straight from persisted data on entry (may be empty/stale
+     * until a schedule is generated). */
+    render_gantt(p, c, GANTT_WIDTH);
     run_menu(p, NULL,
-             "  1. Generate scheduale    2. Report    3. Gantt    4. DAG    5. Export .dot    0. Back",
+             "  1. Generate scheduale    2. Report    3. Gantt    4. DAG    5. Export .dot    6. Export report    0. Back",
              schedule_handler);
     crumb_pop();
     g_sched_company     = NULL;
