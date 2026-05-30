@@ -38,6 +38,12 @@ typedef struct {
 
     int             next_task_id;       /* user tasks start at 1 */
     int             next_milestone_id;
+
+    /* Derived id->Task* index for project_find_task (rebuilt lazily when dirty;
+     * see project_find_task). Not persisted. */
+    Task          **by_id;
+    int             by_id_cap;
+    int             by_id_dirty;
 } Project;
 
 /// <summary>Allocate a project with START/END sentinel nodes and empty task/milestone arrays.</summary>

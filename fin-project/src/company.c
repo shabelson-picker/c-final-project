@@ -40,6 +40,7 @@ Company *company_create(const char *name) {
     c->member_capacity  = INIT_CAP;
     c->project_capacity = INIT_CAP;
     c->next_member_id   = 1;
+    c->mem_by_id_dirty  = 1;   /* build the member index on first lookup */
 
     c->members  = (TeamMember **)malloc(INIT_CAP * sizeof(TeamMember *));
     c->projects = (Project **)   malloc(INIT_CAP * sizeof(Project *));
@@ -53,6 +54,7 @@ void company_destroy(Company *c) {
     if (!c) return;
     for (i = 0; i < c->member_count;  i++) team_member_destroy(c->members[i]);
     for (i = 0; i < c->project_count; i++) project_destroy(c->projects[i]);
+    free(c->mem_by_id);
     free(c->members);
     free(c->projects);
     free(c);
@@ -63,6 +65,7 @@ TeamMember *company_add_member(Company *c, const char *name, const char *role) {
     TeamMember *m = team_member_create(c->next_member_id++, name, role);
     if (!m) return NULL;
     c->members[c->member_count++] = m;
+    c->mem_by_id_dirty = 1;
     return m;
 }
 
@@ -72,15 +75,40 @@ int company_remove_member(Company *c, int member_id) {
         if (c->members[i]->id == member_id) {
             team_member_destroy(c->members[i]);
             c->members[i] = c->members[--c->member_count];
+            c->mem_by_id_dirty = 1;
             return 1;
         }
     }
     return 0;
 }
 
+/* Rebuild the id->TeamMember* index; OOM leaves it NULL (linear fallback). */
+static void rebuild_member_index(Company *c) {
+    int i, maxid = 0;
+    free(c->mem_by_id);
+    c->mem_by_id = NULL;
+    c->mem_by_id_cap = 0;
+    c->mem_by_id_dirty = 0;
+    for (i = 0; i < c->member_count; i++)
+        if (c->members[i]->id > maxid) maxid = c->members[i]->id;
+    if (maxid <= 0) return;
+    c->mem_by_id = (TeamMember **)calloc((size_t)maxid + 1, sizeof(TeamMember *));
+    if (!c->mem_by_id) return;
+    c->mem_by_id_cap = maxid + 1;
+    for (i = 0; i < c->member_count; i++)
+        c->mem_by_id[c->members[i]->id] = c->members[i];
+}
+
+/* O(1) average lookup via the id index (rebuilt lazily; cached slot verified
+ * against the requested id, so staleness degrades to a safe linear scan). */
 TeamMember *company_find_member(Company *c, int member_id) {
     int i;
-    for (i = 0; i < c->member_count; i++)
+    if (c->mem_by_id_dirty) rebuild_member_index(c);
+    if (c->mem_by_id && member_id >= 0 && member_id < c->mem_by_id_cap) {
+        TeamMember *m = c->mem_by_id[member_id];
+        if (m && m->id == member_id) return m;   /* verified O(1) hit */
+    }
+    for (i = 0; i < c->member_count; i++)        /* miss -> safe linear scan */
         if (c->members[i]->id == member_id) return c->members[i];
     return NULL;
 }

@@ -14,6 +14,12 @@ typedef struct {
     Project    **projects;
     int          project_count;
     int          project_capacity;
+
+    /* Derived id->TeamMember* index for company_find_member (rebuilt lazily when
+     * dirty; see company_find_member). Not persisted. */
+    TeamMember **mem_by_id;
+    int          mem_by_id_cap;
+    int          mem_by_id_dirty;
 } Company;
 
 /// <summary>Allocate a company (owns its members and projects) with default capacities.</summary>

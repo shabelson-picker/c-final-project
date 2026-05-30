@@ -85,3 +85,9 @@ No push; stay in fin-project/; no edits to .memory/CLAUDE.md/master course; ASCI
   * Menu: tasks menu option 9 "Split" (gated EDIT_TASK) - pick task + part-1 percent.
   * Verified tests/test_split.c (14 asserts): chain X(2)->A(10)->Y(3), split A 60/40 -> part1=6, part2=4, rewired X->A1->B->Y (Y now depends on B not A1), CPM schedule X0..2 A1 2..8 B 8..12 Y 12..15, makespan preserved (15). All 5 suites green. Build 0/0.
   Next: item 7 (internals/perf: id->pointer index).
+- 2026-05-31 ~05:05 ISR: Item 7 (id->pointer index, perf) DONE + TESTED. *** ROADMAP COMPLETE ***
+  * Replaced the O(n) linear scans in project_find_task / company_find_member (called O(n^2) across topo_sort, forward/backward pass, resolve, render) with a derived id->pointer direct-index array, rebuilt lazily when a dirty flag is set.
+  * Safety: all task/member creation funnels through project_add_task / company_add_member (verified - persistence load uses them too), so dirty is set on every structural change incl. load. Belt-and-suspenders: the index only ever provides a VERIFIED shortcut (slot->id must equal requested id); every miss falls through to the original linear scan, so behavior is identical to pure linear scan, just O(1) on the hit path. OOM during rebuild -> index stays NULL -> linear fallback. project_find_task casts away const for the cache only (logical const).
+  * Fields added to Project {by_id,cap,dirty} and Company {mem_by_id,...}; freed in destroy; dirty set in create/add/remove.
+  * Verified tests/test_index.c (16 asserts): find after add, after swap-remove, after split, absent-id -> NULL, sentinels, members add/remove. Crucially ALL 6 suites still green - the scheduler hammers find_task, so behavior-preservation is proven. Build 0/0.
+  ROADMAP ITEMS 0-7 ALL COMPLETE + TESTED. Next: write the extrapolation (done condition).

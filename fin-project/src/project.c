@@ -71,6 +71,7 @@ Project *project_create(const char *name, Date start_date) {
     p->start_node->sched_end   = 0;
     p->next_task_id      = 1;
     p->next_milestone_id = 1;
+    p->by_id_dirty       = 1;   /* build the id index on first lookup */
 
     return p;
 }
@@ -83,6 +84,7 @@ void project_destroy(Project *p) {
     for (i = 0; i < p->task_count;      i++) task_destroy(p->tasks[i]);
     for (i = 0; i < p->milestone_count; i++) milestone_destroy(p->milestones[i]);
     dia_free(&p->member_ids);
+    free(p->by_id);
     free(p->tasks);
     free(p->milestones);
     free(p);
@@ -95,6 +97,7 @@ Task* project_add_task(Project* p, const char* title, const char* desc) {
 	Task* t = task_create(p->next_task_id++, title, desc);
 	if (!t) return NULL;
 	p->tasks[p->task_count++] = t;
+	p->by_id_dirty = 1;
 
 	/* Every new task is initially an island: start -> t -> end */
 	task_add_post(p->start_node, t->id);
@@ -163,17 +166,45 @@ int project_remove_task(Project* p, int task_id) {
 
 	task_destroy(victim);
 	p->tasks[vidx] = p->tasks[--p->task_count];
+	p->by_id_dirty = 1;
 	return 1;
 }
 
 /* ---- lookups ------------------------------------------------------------ */
 
+/* Rebuild the id->Task* index (direct array sized to the largest task id).
+ * On OOM the index stays NULL and lookups fall back to a linear scan. */
+static void rebuild_task_index(Project* p) {
+	int i, maxid = 0;
+	free(p->by_id);
+	p->by_id = NULL;
+	p->by_id_cap = 0;
+	p->by_id_dirty = 0;
+	for (i = 0; i < p->task_count; i++)
+		if (p->tasks[i]->id > maxid) maxid = p->tasks[i]->id;
+	if (maxid <= 0) return;
+	p->by_id = (Task**)calloc((size_t)maxid + 1, sizeof(Task*));
+	if (!p->by_id) return;
+	p->by_id_cap = maxid + 1;
+	for (i = 0; i < p->task_count; i++)
+		p->by_id[p->tasks[i]->id] = p->tasks[i];
+}
+
+/* O(1) average lookup via the id index. The index is rebuilt lazily when a task
+ * is added/removed; a cached slot is verified against the requested id so any
+ * staleness degrades to a safe linear scan rather than a wrong result. */
 Task* project_find_task(const Project* p, int id) {
+	Project* mp = (Project*)p;   /* logical const: only the derived cache changes */
 	int i;
 	if (id == START_NODE_ID) return p->start_node;
 	if (id == END_NODE_ID)   return p->end_node;
-	for (i = 0; i < p->task_count; i++)
-		if (p->tasks[i]->id == id) return p->tasks[i];
+	if (mp->by_id_dirty) rebuild_task_index(mp);
+	if (mp->by_id && id >= 0 && id < mp->by_id_cap) {
+		Task* t = mp->by_id[id];
+		if (t && t->id == id) return t;   /* verified O(1) hit */
+	}
+	for (i = 0; i < mp->task_count; i++)   /* miss -> safe linear scan */
+		if (mp->tasks[i]->id == id) return mp->tasks[i];
 	return NULL;
 }
 
