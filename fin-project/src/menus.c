@@ -13,6 +13,7 @@
 #include "dot_export.h"
 #include "report_exporter.h"
 #include "persistence.h"
+#include "roles.h"
 #include "ui.h"
 
 /* GANTT_WIDTH defined in constants.h */
@@ -464,13 +465,13 @@ static int tasks_handler(void *ctx, int choice) {
     switch (choice) {
         case 0: return 1;
         case 1: list_tasks(p);    break;
-        case 2: add_task(p);      break;
-        case 3: remove_task(p);   break;
-        case 4: edit_task(p);     break;
-        case 5: change_status(p); break;
-        case 6: link_tasks(p);    break;
+        case 2: if (priv_require(PRIV_EDIT_TASK)) add_task(p);      break;
+        case 3: if (priv_require(PRIV_EDIT_TASK)) remove_task(p);   break;
+        case 4: if (priv_require(PRIV_EDIT_TASK)) edit_task(p);     break;
+        case 5: if (priv_require(PRIV_EDIT_TASK)) change_status(p); break;
+        case 6: if (priv_require(PRIV_EDIT_DEPS)) link_tasks(p);    break;
         case 7: menu_deps(p);     break;
-        case 8: manual_assign(p); break;
+        case 8: if (priv_require(PRIV_ASSIGN))    manual_assign(p); break;
     }
     return 0;
 }
@@ -613,6 +614,7 @@ static int schedule_handler(void *ctx, int choice) {
         case 1: {
             int strat;
             ScheduleStrategy s;
+            if (!priv_require(PRIV_SCHEDULE)) break;
             printf("  1. Earliest Deadline    2. Risk-Weighted Critical Path    3. Pessimistic (worst-case)\n");
             { int _r = read_nav("  Strategy: ", &strat); if (_r != 1 || strat < 1 || strat > 3) break; }
             s = (strat == 1) ? SCHED_EARLIEST_DEADLINE
@@ -635,11 +637,12 @@ static int schedule_handler(void *ctx, int choice) {
             company_save(g_sched_company);  /* persist assignments + any roster adds */
             break;
         }
-        case 2: schedule_print_report(p); break;
-        case 3: render_gantt(p, g_sched_company, GANTT_WIDTH); break;
-        case 4: render_dag(p);            break;
+        case 2: if (priv_require(PRIV_REPORT)) schedule_print_report(p); break;
+        case 3: if (priv_require(PRIV_REPORT)) render_gantt(p, g_sched_company, GANTT_WIDTH); break;
+        case 4: if (priv_require(PRIV_REPORT)) render_dag(p); break;
         case 5: {
             char dot_path[MAX_PATH_LEN];
+            if (!priv_require(PRIV_REPORT)) break;
             const char *dir = p->save_dir[0] ? p->save_dir : ".";
             snprintf(dot_path, MAX_PATH_LEN, "%s\\%s.dot", dir, p->name);
             export_dot(p, dot_path);
@@ -648,6 +651,7 @@ static int schedule_handler(void *ctx, int choice) {
         case 6: {
             char rep_path[MAX_PATH_LEN];
             const char *dir = p->save_dir[0] ? p->save_dir : ".";
+            if (!priv_require(PRIV_REPORT)) break;
             snprintf(rep_path, MAX_PATH_LEN, "%s\\%s_report.html", dir, p->name);
             export_report_html(p, g_sched_company, rep_path);
             break;
@@ -656,6 +660,7 @@ static int schedule_handler(void *ctx, int choice) {
             int mid, start, len, k;
             TeamMember *m;
             char label[MAX_NAME_LEN + 16];
+            if (!priv_require(PRIV_ASSIGN)) break;
             if (p->member_ids.count == 0) { cprintf(C_YELLOW, "  No members on the project roster.\n"); break; }
             printf("  Roster:\n");
             for (k = 0; k < p->member_ids.count; k++) {
@@ -811,7 +816,9 @@ static int project_handler(void *ctx, int choice) {
         case 2: menu_deps(pc->p);             break;
         case 3: menu_milestones(pc->p);       break;
         case 4: menu_schedule(pc->c, pc->idx); break;
-        case 5: run_checklist(pc, roster_render, roster_toggle); company_save(pc->c); break;
+        case 5:
+            if (!priv_require(PRIV_ASSIGN)) break;
+            run_checklist(pc, roster_render, roster_toggle); company_save(pc->c); break;
     }
     return 0;
 }
@@ -867,8 +874,8 @@ static int projects_handler(void *ctx, int choice) {
     Company *c = (Company *)ctx;
     switch (choice) {
         case 0: return 1;
-        case 1: create_project(c); break;
-        case 2: open_project(c);   break;
+        case 1: if (priv_require(PRIV_ADMIN))        create_project(c); break;
+        case 2: if (priv_require(PRIV_VIEW_PROJECT))  open_project(c);   break;
     }
     return 0;
 }
@@ -895,10 +902,10 @@ static int company_handler(void *ctx, int choice) {
     Company *c = (Company *)ctx;
     switch (choice) {
         case 0: return 1;
-        case 1: menu_company_projects(c); break;
-        case 2: menu_company_team(c);     break;
+        case 1: if (priv_require(PRIV_VIEW_PROJECT))   menu_company_projects(c); break;
+        case 2: if (priv_require(PRIV_ADMIN))          menu_company_team(c);     break;
         case 3: company_save(c); cprintf(C_GREEN, "  Saved to %s\n", c->save_dir); break;
-        case 4: render_portfolio_gantt(c, GANTT_WIDTH); break;
+        case 4: if (priv_require(PRIV_VIEW_PORTFOLIO)) render_portfolio_gantt(c, GANTT_WIDTH); break;
         case 1999: project_mayhem_rules(); break;  /* easter egg (undocumented) */
     }
     return 0;

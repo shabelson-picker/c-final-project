@@ -137,6 +137,7 @@
     <ClCompile Include="src\team.c" />
     <ClCompile Include="src\project.c" />
     <ClCompile Include="src\algorithms.c" />
+    <ClCompile Include="src\roles.c" />
     <ClCompile Include="src\renderer.c" />
     <ClCompile Include="src\persistence.c" />
     <ClCompile Include="src\menus.c" />
@@ -156,6 +157,7 @@
     <ClInclude Include="src\team.h" />
     <ClInclude Include="src\project.h" />
     <ClInclude Include="src\algorithms.h" />
+    <ClInclude Include="src\roles.h" />
     <ClInclude Include="src\renderer.h" />
     <ClInclude Include="src\persistence.h" />
     <ClInclude Include="src\menus.h" />

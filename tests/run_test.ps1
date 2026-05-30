@@ -23,7 +23,8 @@ cmd /c "`"$vcvars`" >nul 2>&1 && cl $clArgs"
 if ($LASTEXITCODE -ne 0) { Write-Output "COMPILE FAILED ($LASTEXITCODE)"; exit $LASTEXITCODE }
 
 Write-Output "--- running $exeName ---"
-& $exePath
-$rc = $LASTEXITCODE
+# Run from the project root so tests can open data files (e.g. roles.cfg) by name.
+Push-Location $root
+try { & $exePath; $rc = $LASTEXITCODE } finally { Pop-Location }
 Write-Output "--- exit code: $rc ---"
 exit $rc
