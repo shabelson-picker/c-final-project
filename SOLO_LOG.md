@@ -57,3 +57,12 @@ No push; stay in fin-project/; no edits to .memory/CLAUDE.md/master course; ASCI
   * Menu: schedule Generate prompts policy after strategy; invalid -> EARLIEST_FREE.
   * Verified tests/test_policy.c: specialist + generalist, 2 independent backend tasks. EARLIEST_FREE & BALANCED spread one each (makespan 5); BEST_FIT stacks both on the specialist (makespan 10), generalist idle. 9/9 pass. test_calendar still green (no regression). Build 0/0.
   Next: item 3 (vacations as time-locked member blocks).
+- 2026-05-31 ~03:35 ISR: Item 3 (vacations / immovable blocks) DONE + TESTED.
+  * Model (per plan): a vacation is a real Task with fixed_time=1 + manually_assigned=1, assignee=the member, required_skills=0, window [sched_start, sched_start+len]. Reuses the existing machinery instead of a parallel data path.
+  * Task.fixed_time field added + persisted (persistence.c save/load).
+  * forward_pass: `if (t->fixed_time) continue;` -> the window never moves.
+  * resolve_resource_overlaps: when a same-member overlap involves a fixed block, the FLEXIBLE task is the waiter (pushed after the block) instead of the default earlier->later; both-fixed pairs are skipped (no infinite loop). No splitting -> a straddling task moves wholesale after the block (splitting is item 6).
+  * Creation: project_add_fixed_block(p, label, assignee, start, len) (project.c) + schedule menu option 7 "Request vacation" (pick roster member, start day, length -> reschedule + save).
+  * Cross-project bonus: because a vacation is an assigned task with a sched_end, compute_external_floor already propagates it to OTHER projects (member unavailable until vacation end there too) - consistent with item 1's coarseness.
+  * Verified tests/test_vacation.c: 10-day task straddling a day3..7 vacation reroutes to start day 7 (ends 17), block stays 3..7; a 2-day task (fresh company) fits before the block and stays at 0. 10/10 pass. Notably scenario 2 first FAILED on the same member because the item-1 calendar correctly kept Carol booked from project 1 until day 17 - confirms the two features compose; isolated to a fresh company. calendar+policy still green.
+  Next: item 4 (portfolio/company Gantt).

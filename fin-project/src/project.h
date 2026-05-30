@@ -65,6 +65,18 @@ Task      *project_add_task(Project *p, const char *title, const char *desc);
 /// <returns>The new milestone, or NULL on failure.</returns>
 Milestone *project_add_milestone(Project *p, const char *name, int deadline_day, int priority);
 
+/// <summary>Create an immovable time block (e.g. a vacation) pinned to a member: a
+/// fixed_time + manually_assigned task occupying [start_day, start_day + length_days)
+/// with no required skills. The scheduler routes the member's other tasks around it.</summary>
+/// <param name="p">Project.</param>
+/// <param name="label">Task title (copied), e.g. "[Vacation] Carol".</param>
+/// <param name="assignee_id">Member the block belongs to.</param>
+/// <param name="start_day">Project-relative start day.</param>
+/// <param name="length_days">Length in days (clamped to >= 1).</param>
+/// <returns>The new block task, or NULL on allocation failure.</returns>
+Task      *project_add_fixed_block(Project *p, const char *label, int assignee_id,
+                                   int start_day, int length_days);
+
 /// <summary>Remove a task and detach it from all neighbours, reconnecting orphans to START/END.</summary>
 /// <param name="p">Project.</param>
 /// <param name="task_id">ID of the task to remove.</param>

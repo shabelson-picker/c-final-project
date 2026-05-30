@@ -652,6 +652,35 @@ static int schedule_handler(void *ctx, int choice) {
             export_report_html(p, g_sched_company, rep_path);
             break;
         }
+        case 7: {   /* Request vacation: pin an immovable block; reschedule around it */
+            int mid, start, len, k;
+            TeamMember *m;
+            char label[MAX_NAME_LEN + 16];
+            if (p->member_ids.count == 0) { cprintf(C_YELLOW, "  No members on the project roster.\n"); break; }
+            printf("  Roster:\n");
+            for (k = 0; k < p->member_ids.count; k++) {
+                TeamMember *mm = company_find_member(g_sched_company, p->member_ids.data[k]);
+                if (mm) printf("    [%d] %s (%s)\n", mm->id, mm->name, mm->role);
+            }
+            if (read_nav("  Member id: ", &mid) != 1) break;
+            m = company_find_member(g_sched_company, mid);
+            if (!m || dia_find_index(&p->member_ids, mid) == -1) {
+                cprintf(C_YELLOW, "  That member is not on this project.\n"); break;
+            }
+            if (read_nav("  Start day (project-relative): ", &start) != 1) break;
+            if (read_nav("  Length in days: ", &len) != 1 || len < 1) break;
+            snprintf(label, sizeof label, "[Vacation] %s", m->name);
+            if (!project_add_fixed_block(p, label, mid, start, len)) {
+                cprintf(C_YELLOW, "  Could not create the block.\n"); break;
+            }
+            assign_members_greedy(g_sched_company, g_sched_project_idx, SCHED_EARLIEST_DEADLINE);
+            schedule_project(p, SCHED_EARLIEST_DEADLINE);
+            render_gantt(p, g_sched_company, GANTT_WIDTH);
+            company_save(g_sched_company);
+            cprintf(C_GREEN, "  Vacation for %s pinned at day %d for %d day(s); others rerouted.\n",
+                    m->name, start, len);
+            break;
+        }
     }
     return 0;
 }
@@ -666,7 +695,7 @@ void menu_schedule(Company *c, int project_idx) {
     /* sched_render keeps the Gantt (from persisted data) above the menu every
      * iteration, so it's visible on entry without a regenerate. */
     run_menu(p, sched_render,
-             "  1. Generate scheduale    2. Report    3. Gantt    4. DAG    5. Export .dot    6. Export report    0. Back",
+             "  1. Generate scheduale    2. Report    3. Gantt    4. DAG    5. Export .dot    6. Export report    7. Request vacation    0. Back",
              schedule_handler);
     crumb_pop();
     g_sched_company     = NULL;

@@ -123,6 +123,8 @@ void forward_pass(Project *p, const int *order, int n, ScheduleStrategy s) {
         Task *t = p->tasks[order[i]];
         int earliest = 0;
 
+        if (t->fixed_time) continue;   /* immovable window (vacation): keep sched_start/end */
+
         for (j = 0; j < t->pre_ids.count; j++) {
             Task *pre = project_find_task(p, t->pre_ids.data[j]);
             if (pre && pre->sched_end > earliest) earliest = pre->sched_end;
@@ -435,6 +437,7 @@ static void resolve_resource_overlaps(Project *p, ScheduleStrategy s) {
         for (i = 1; i < p->task_count; i++) {
             Task *prev = bymember[i - 1];
             Task *cur  = bymember[i];
+            Task *waiter, *dep;
             int dup = 0;
 
             if (prev->assignee_id == -1 || cur->assignee_id != prev->assignee_id)
@@ -442,12 +445,20 @@ static void resolve_resource_overlaps(Project *p, ScheduleStrategy s) {
             if (cur->sched_start >= prev->sched_end)   /* sorted: prev starts first */
                 continue;                              /* no overlap */
 
+            /* Decide which task moves. A fixed_time block (vacation) never moves:
+             * the flexible task is pushed after it. If both are fixed we cannot
+             * resolve the clash, so skip (avoids spinning to max_iter). */
+            if (cur->fixed_time && prev->fixed_time)
+                continue;
+            if (cur->fixed_time) { waiter = prev; dep = cur; }  /* push earlier task after the block */
+            else                 { waiter = cur;  dep = prev; } /* default: later waits for earlier */
+
             /* work_pre_ids is unsorted - linear contains check */
-            for (k = 0; k < cur->work_pre_ids.count; k++)
-                if (cur->work_pre_ids.data[k] == prev->id) { dup = 1; break; }
+            for (k = 0; k < waiter->work_pre_ids.count; k++)
+                if (waiter->work_pre_ids.data[k] == dep->id) { dup = 1; break; }
             if (dup) continue;
 
-            dia_append(&cur->work_pre_ids, prev->id);   /* earlier -> later */
+            dia_append(&waiter->work_pre_ids, dep->id);
             added = 1;
         }
 

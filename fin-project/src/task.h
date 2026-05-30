@@ -28,6 +28,9 @@ typedef struct {
 
     int        assignee_id;       /* -1 = unassigned                     */
     int        manually_assigned; /* 1 = pinned; scheduler won't reassign */
+    int        fixed_time;        /* 1 = immovable window (e.g. vacation): forward_pass
+                                   * leaves sched_start/end as-is and other tasks of the
+                                   * same member are routed around it */
     int        milestone_id;     /* -1 = none                           */
 
     /* Set by scheduler */

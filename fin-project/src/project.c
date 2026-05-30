@@ -105,6 +105,22 @@ Task* project_add_task(Project* p, const char* title, const char* desc) {
 	return t;
 }
 
+Task* project_add_fixed_block(Project* p, const char* label, int assignee_id,
+                              int start_day, int length_days) {
+    Task* t = project_add_task(p, label, "");
+    if (!t) return NULL;
+    if (length_days < 1) length_days = 1;
+    if (start_day   < 0) start_day   = 0;
+    task_set_pert(t, (float)length_days, (float)length_days, (float)length_days);
+    t->required_skills    = 0;          /* no skills: never picked for real work */
+    t->assignee_id        = assignee_id;
+    t->manually_assigned  = 1;          /* greedy keeps the pin */
+    t->fixed_time         = 1;          /* forward_pass leaves the window in place */
+    t->sched_start        = start_day;
+    t->sched_end          = start_day + length_days;
+    return t;
+}
+
 Milestone* project_add_milestone(Project* p, const char* name, int deadline_day, int priority) {
 	if (!ensure_milestone_cap(p)) return NULL;
 	Milestone* m = milestone_create(p->next_milestone_id++, name, deadline_day, priority);

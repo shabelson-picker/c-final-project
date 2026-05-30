@@ -115,6 +115,7 @@ static int save_project_meta(const Project* p, const char* dir) {
 			write_int(f, "required_skills", (int)t->required_skills, 4);
 			write_int(f, "assignee_id", t->assignee_id, 4);
 			write_int(f, "manually_assigned", t->manually_assigned, 4);
+			write_int(f, "fixed_time", t->fixed_time, 4);
 			write_int(f, "milestone_id", t->milestone_id, 4);
 			write_int(f, "sched_start", t->sched_start, 4);
 			write_int(f, "sched_end", t->sched_end, 4);
@@ -172,6 +173,7 @@ static void parse_task(Project* p, Task* t, const char* key, const char* val) {
 	else if (strcmp(key, "required_skills") == 0) t->required_skills = (uint32_t)strtol(val, NULL, 10);
 	else if (strcmp(key, "assignee_id") == 0) t->assignee_id = (int)strtol(val, NULL, 10);
 	else if (strcmp(key, "manually_assigned") == 0) t->manually_assigned = (int)strtol(val, NULL, 10);
+	else if (strcmp(key, "fixed_time") == 0) t->fixed_time = (int)strtol(val, NULL, 10);
 	else if (strcmp(key, "milestone_id") == 0) t->milestone_id = (int)strtol(val, NULL, 10);
 	else if (strcmp(key, "sched_start") == 0) t->sched_start = (int)strtol(val, NULL, 10);
 	else if (strcmp(key, "sched_end") == 0) t->sched_end = (int)strtol(val, NULL, 10);
