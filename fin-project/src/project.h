@@ -64,13 +64,13 @@ int        project_remove_task(Project *p, int task_id);
 /// <param name="p">Project.</param>
 /// <param name="id">Task ID.</param>
 /// <returns>The task, or NULL if not found.</returns>
-Task      *project_find_task(Project *p, int id);
+Task      *project_find_task(const Project *p, int id);
 
 /// <summary>Look up a milestone by ID.</summary>
 /// <param name="p">Project.</param>
 /// <param name="id">Milestone ID.</param>
 /// <returns>The milestone, or NULL if not found.</returns>
-Milestone *project_find_milestone(Project *p, int id);
+Milestone *project_find_milestone(const Project *p, int id);
 
 /// <summary>Add a dependency pre_id -> post_id, rejecting duplicates and cycles; detaches sentinels.</summary>
 /// <param name="p">Project.</param>

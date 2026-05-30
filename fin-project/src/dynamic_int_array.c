@@ -42,7 +42,7 @@ int  dia_find_index(const DynamicIntArray* a, int value)
 {
     int *fnd_ptr = bsearch(&value, a->data, (size_t)a->count, sizeof(value), cmp);
     if (fnd_ptr == NULL) return -1;
-    return fnd_ptr - a->data;
+    return (int)(fnd_ptr - a->data);
 }
 int dia_remove(DynamicIntArray *a, int value) {
     int i;

@@ -132,7 +132,7 @@ int project_remove_task(Project* p, int task_id) {
 
 /* ---- lookups ------------------------------------------------------------ */
 
-Task* project_find_task(Project* p, int id) {
+Task* project_find_task(const Project* p, int id) {
 	int i;
 	if (id == START_NODE_ID) return p->start_node;
 	if (id == END_NODE_ID)   return p->end_node;
@@ -141,7 +141,7 @@ Task* project_find_task(Project* p, int id) {
 	return NULL;
 }
 
-Milestone* project_find_milestone(Project* p, int id) {
+Milestone* project_find_milestone(const Project* p, int id) {
 	int i;
 	for (i = 0; i < p->milestone_count; i++)
 		if (p->milestones[i]->id == id) return p->milestones[i];
