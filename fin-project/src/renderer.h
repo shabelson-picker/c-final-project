@@ -5,7 +5,7 @@
 #include "company.h"
 
 /*
- * Gantt chart — one row per task.
+ * Gantt chart - one row per task.
  * PERT range shown as dim dashes, likely duration as solid bright block.
  * Critical path tasks highlighted in red.
  * width: terminal character width for the timeline area.
@@ -13,7 +13,7 @@
 void render_gantt(const Project *p, const Company *c, int width);
 
 /*
- * DAG view — ASCII dependency graph.
+ * DAG view - ASCII dependency graph.
  * Nodes are task IDs/titles; edges show pre->post relationships.
  */
 void render_dag(const Project *p);

@@ -33,7 +33,7 @@ int         company_assign_member(Company *c, int project_idx,
 
 void        company_print_summary(const Company *c);
 
-/* Interactive create/load — prompt user for name and directory */
+/* Interactive create/load - prompt user for name and directory */
 Company    *company_new_interactive(void);
 Company    *company_load_interactive(void);
 

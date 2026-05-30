@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 #include <io.h>
 #include <windows.h>
 #include "file_browser.h"
@@ -70,7 +71,7 @@ int read_float(const char *prompt, float *out) {
     return 1;
 }
 
-/* Forward declaration — defined in member menu section */
+/* Forward declaration - defined in member menu section */
 static uint32_t select_skills(void);
 
 /* ---- breadcrumb --------------------------------------------------------- */
@@ -108,7 +109,7 @@ static Company *g_company = NULL;  /* set when entering a project context */
 
 static void autosave(Project *p) {
     if (p->save_dir[0] == '\0') {
-        printf("  [warning] auto-save skipped — no directory set.\n");
+        printf("  [warning] auto-save skipped - no directory set.\n");
         return;
     }
     if (g_company) company_save(g_company);
@@ -426,32 +427,83 @@ void menu_milestones(Project *p) {
 static Company *g_sched_company    = NULL;
 static int      g_sched_project_idx = -1;
 
+static int prompt_yes_no(const char *msg) {
+    char buf[16];
+    printf("%s [y/n]: ", msg);
+    if (!fgets(buf, sizeof(buf), stdin)) return 0;
+    return (buf[0] == 'y' || buf[0] == 'Y');
+}
+
+/* True if any member already on the project roster has all of t's skills. */
+static int roster_has_skill(Company *c, Project *p, const Task *t) {
+    int k;
+    for (k = 0; k < p->member_ids.count; k++) {
+        TeamMember *m = company_find_member(c, p->member_ids.data[k]);
+        if (m && team_member_has_skills(m, t->required_skills)) return 1;
+    }
+    return 0;
+}
+
+/* Collect-then-resolve: for each task left unassigned after a greedy run, offer
+ * to pull a qualified company member onto the project. Re-runs assignment once
+ * if any were added. All the I/O lives here; the scheduler stays pure. */
+static void resolve_unassigned(Company *c, int project_idx, ScheduleStrategy s) {
+    Project *p = c->projects[project_idx];
+    int i, added = 0;
+
+    for (i = 0; i < p->task_count; i++) {
+        Task *t = p->tasks[i];
+        int mid;
+        if (t->assignee_id != -1) continue;
+        if (roster_has_skill(c, p, t)) continue;  /* coverable now - re-run will assign */
+
+        mid = suggest_company_member(c, p, t);
+        if (mid == -1) {
+            printf("  Task [%d] '%s': no company member has the required skills.\n", t->id, t->title);
+            continue;
+        }
+        {
+            TeamMember *m = company_find_member(c, mid);
+            char msg[200];
+            snprintf(msg, sizeof(msg),
+                     "  Task [%d] '%s' has no one qualified on the project. Add %s (%s)?",
+                     t->id, t->title, m->name, m->role);
+            if (prompt_yes_no(msg)) {
+                company_assign_member(c, project_idx, mid, -1);
+                added = 1;
+            }
+        }
+    }
+
+    if (added) {
+        assign_members_greedy(c, project_idx, s);
+        schedule_project(p, s);
+        render_gantt(p, c, GANTT_WIDTH);
+    }
+}
+
 static int schedule_handler(Project *p, int choice) {
     switch (choice) {
         case 0: return 1;
-        case 1:
-            if (schedule_project(p, SCHED_EARLIEST_DEADLINE))
-                printf("  Schedule computed.\n");
-            break;
-        case 2:
-            if (schedule_project(p, SCHED_RISK_WEIGHTED_CRITICAL))
-                printf("  Risk-weighted schedule computed.\n");
-            break;
-        case 3:
-            assign_members_greedy(g_sched_company, g_sched_project_idx);
-            printf("  Members assigned.\n");
-            break;
-        case 4: schedule_print_report(p); break;
-        case 5: {
+        case 1: {
             int strat;
-            printf("  1. Earliest Deadline    2. Risk-Weighted Critical Path\n");
-            { int _r = read_nav("  Strategy: ", &strat); if (_r != 1 || (strat != 1 && strat != 2)) break; }
-            schedule_project(p, strat == 1 ? SCHED_EARLIEST_DEADLINE : SCHED_RISK_WEIGHTED_CRITICAL);
+            ScheduleStrategy s;
+            printf("  1. Earliest Deadline    2. Risk-Weighted Critical Path    3. Pessimistic (worst-case)\n");
+            { int _r = read_nav("  Strategy: ", &strat); if (_r != 1 || strat < 1 || strat > 3) break; }
+            s = (strat == 1) ? SCHED_EARLIEST_DEADLINE
+              : (strat == 2) ? SCHED_RISK_WEIGHTED_CRITICAL
+              : SCHED_PESSIMISTIC;
+            assign_members_greedy(g_sched_company, g_sched_project_idx, s);
+            schedule_project(p, s);
             render_gantt(p, g_sched_company, GANTT_WIDTH);
+            resolve_unassigned(g_sched_company, g_sched_project_idx, s);
+            company_save(g_sched_company);  /* persist assignments + any roster adds */
             break;
         }
-        case 6: render_dag(p);                break;
-        case 7: {
+        case 2: schedule_print_report(p); break;
+        case 3: render_gantt(p, g_sched_company, GANTT_WIDTH); break;
+        case 4: render_dag(p);            break;
+        case 5: {
             char dot_path[MAX_PATH_LEN], exe_dir[MAX_PATH_LEN];
             get_exe_dir(exe_dir, MAX_PATH_LEN);
             snprintf(dot_path, MAX_PATH_LEN, "%s%s.dot", exe_dir, p->name);
@@ -470,8 +522,7 @@ void menu_schedule(Company *c, int project_idx) {
     g_sched_project_idx = project_idx;
     crumb_push("Schedule");
     run_menu(p, NULL,
-             "  1. Earliest Deadline    2. Risk-Weighted Critical Path\n"
-             "  3. Assign members (greedy)    4. Report    5. Gantt    6. DAG    7. Export .dot    0. Back",
+             "  1. Generate scheduale    2. Report    3. Gantt    4. DAG    5. Export .dot    0. Back",
              schedule_handler);
     crumb_pop();
     g_sched_company     = NULL;
@@ -497,7 +548,7 @@ static void add_company_member(Company *c) {
     if (!m) { printf("  Error: could not create member.\n"); return; }
     m->skills = select_skills();
     printf("  Member [%d] %s added to company.\n", m->id, m->name);
-    if (g_company) company_save(g_company);
+    company_save(c);
 }
 
 static void menu_company_team(Company *c) {
@@ -513,7 +564,7 @@ static void menu_company_team(Company *c) {
         if (choice == 2) {
             int id;
             if (read_int("  Member ID to remove: ", &id) == -1) continue;
-            if (company_remove_member(c, id)) { printf("  Removed.\n"); if (g_company) company_save(g_company); }
+            if (company_remove_member(c, id)) { printf("  Removed.\n"); company_save(c); }
             else printf("  Member [%d] not found.\n", id);
         }
     }
@@ -558,14 +609,37 @@ static void open_project(Company *c) {
             case 3: menu_milestones(p);      break;
             case 4: menu_schedule(c, idx);   break;
             case 5: {
-                /* assign company member to this project */
-                int mid;
-                list_members(c);
-                if (read_int("  Add member ID to project: ", &mid) == -1) break;
-                if (company_assign_member(c, idx, mid, -1))
-                    printf("  Member [%d] added to project.\n", mid);
-                else
-                    printf("  Failed — check member ID and skills.\n");
+                /* toggle project roster - checklist style */
+                int mid, mi;
+                for (;;) {
+                    printf("\n  Project roster (enter ID to toggle, 0 to confirm):\n");
+                    for (mi = 0; mi < c->member_count; mi++) {
+                        TeamMember *m = c->members[mi];
+                        int on_roster = 0, _k;
+                    for (_k = 0; _k < p->member_ids.count; _k++)
+                        if (p->member_ids.data[_k] == m->id) { on_roster = 1; break; }
+                        printf("  [%s] [%2d] %-20s  %s\n",
+                               on_roster ? "x" : " ", m->id, m->name, m->role);
+                    }
+                    { int _r = read_nav("  > ", &mid); if (_r != 1) continue; }
+                    if (mid == 0) break;
+                    { int _k, _found = 0;
+                      for (_k = 0; _k < p->member_ids.count; _k++)
+                          if (p->member_ids.data[_k] == mid) { _found = 1; break; }
+                      if (_found) {
+                          TeamMember *rm = company_find_member(c, mid);
+                          dia_sort_remove(&p->member_ids, mid);       /* master */
+                          if (rm) dia_sort_remove(&rm->project_ids, idx); /* apprentice */
+                          printf("  Member [%d] removed from project.\n", mid);
+                      } else {
+                          if (company_assign_member(c, idx, mid, -1))
+                              printf("  Member [%d] added to project.\n", mid);
+                          else
+                              printf("  Member [%d] not found.\n", mid);
+                      }
+                    }
+                }
+                company_save(c);
                 break;
             }
         }
@@ -577,7 +651,9 @@ static void open_project(Company *c) {
 
 static void create_project(Company *c) {
     char name[MAX_NAME_LEN];
-    Date today = {2026, 5, 30};
+    time_t now = time(NULL);
+    struct tm *lt = localtime(&now);
+    Date today = { lt->tm_year + 1900, lt->tm_mon + 1, lt->tm_mday };
     Project *p;
     char proj_dir[MAX_PATH_LEN];
 

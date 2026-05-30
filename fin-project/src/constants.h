@@ -7,7 +7,7 @@
 #define MAX_NAME_LEN    64
 #define MAX_PATH_LEN    256
 
-/* Graph sentinel node IDs — not real tasks */
+/* Graph sentinel node IDs - not real tasks */
 #define START_NODE_ID   0
 #define END_NODE_ID    -1
 

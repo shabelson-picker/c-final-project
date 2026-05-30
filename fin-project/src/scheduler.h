@@ -1,2 +1,2 @@
-/* scheduler.h — superseded by algorithms.h */
+/* scheduler.h - superseded by algorithms.h */
 #include "algorithms.h"

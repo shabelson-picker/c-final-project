@@ -53,7 +53,7 @@ int export_dot(const Project *p, const char *filename) {
     for (i = 0; i < p->end_node->pre_ids.count; i++)
         fprintf(f, "  %d -> end;\n", p->end_node->pre_ids.data[i]);
 
-    /* Alt edges (plan B) — dashed */
+    /* Alt edges (plan B) - dashed */
     for (i = 0; i < p->task_count; i++) {
         Task *t = p->tasks[i];
         for (j = 0; j < t->alt_ids.count; j++)

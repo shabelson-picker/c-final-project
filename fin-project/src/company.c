@@ -112,8 +112,9 @@ int company_assign_member(Company *c, int project_idx, int member_id, int task_i
     if (dia_find_index(&m->project_ids, project_idx) == -1)
         dia_sort_insert(&m->project_ids, project_idx);
 
+    /* Keep p->member_ids sorted so dia_find_index (bsearch) is valid */
     if (dia_find_index(&p->member_ids, member_id) == -1)
-        dia_append(&p->member_ids, member_id);
+        dia_sort_insert(&p->member_ids, member_id);
 
     /* Assign to task if requested */
     if (task_id != -1) {

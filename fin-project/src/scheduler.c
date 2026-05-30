@@ -1,1 +1,1 @@
-/* scheduler.c — superseded by algorithms.c */
+/* scheduler.c - superseded by algorithms.c */

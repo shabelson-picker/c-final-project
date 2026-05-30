@@ -6,7 +6,8 @@
 
 typedef enum {
     SCHED_EARLIEST_DEADLINE,
-    SCHED_RISK_WEIGHTED_CRITICAL
+    SCHED_RISK_WEIGHTED_CRITICAL,
+    SCHED_PESSIMISTIC
 } ScheduleStrategy;
 
 /* ---- CPM scheduling pipeline -------------------------------------------- */
@@ -37,6 +38,11 @@ void schedule_print_report(const Project *p);
  * - Resource conflicts resolved via work_pre_ids (separate from DAG)
  * - Iterates up to MAX_ASSIGN_PASSES re-scheduling rounds
  * - Warns if no qualified member exists for a task */
-void assign_members_greedy(Company *c, int project_idx);
+void assign_members_greedy(Company *c, int project_idx, ScheduleStrategy strategy);
+
+/* Suggest a company member NOT on the project roster who has all of a task's
+ * required skills. Returns the member id, or -1 if none qualifies. Pure (no I/O);
+ * the UI uses this to offer pulling a worker onto the project after assignment. */
+int suggest_company_member(const Company *c, const Project *p, const Task *t);
 
 #endif /* ALGORITHMS_H */

@@ -4,6 +4,7 @@
 #include "renderer.h"
 #include "constants.h"
 #include "team.h"
+#include "algorithms.h"
 
 /* ANSI color codes */
 #define ANSI_RESET   "\033[0m"
@@ -29,9 +30,9 @@ static int day_to_col(int day, int project_end, int width) {
 
 /*
  * Build a 3-zone bar for task t:
- *   kind 1 '#' — optimistic zone  [sched_start .. sched_start+pert_min]
- *   kind 2 '~' — expected zone    [sched_start+pert_min .. sched_end]
- *   kind 3 '-' — pessimistic zone [sched_end .. sched_start+pert_max]
+ *   kind 1 '#' - optimistic zone  [sched_start .. sched_start+pert_min]
+ *   kind 2 '~' - expected zone    [sched_start+pert_min .. sched_end]
+ *   kind 3 '-' - pessimistic zone [sched_end .. sched_start+pert_max]
  */
 static void build_bar(const Task *t, int project_end, int width,
                       char *bar, char *kind) {
@@ -49,14 +50,36 @@ static void build_bar(const Task *t, int project_end, int width,
     for (i = col_exp_end; i <= col_pes_end && i < width; i++) { bar[i] = '-'; kind[i] = 3; }
 }
 
+/* One Gantt row: a task plus its 1-based DAG (topological) position. */
+typedef struct { Task *t; int dag; } GanttRow;
+
+/* Sort rows by start day for display; tie-break by id for stable output. */
+static int cmp_gantt_row(const void *a, const void *b) {
+    const GanttRow *ra = (const GanttRow *)a;
+    const GanttRow *rb = (const GanttRow *)b;
+    if (ra->t->sched_start != rb->t->sched_start)
+        return ra->t->sched_start - rb->t->sched_start;
+    return ra->t->id - rb->t->id;
+}
+
 void render_gantt(const Project *p, const Company *c, int width) {
-    int i, j, project_end = 0;
+    int i, j, project_end = 0, n = 0;
     char *bar  = (char *)malloc((size_t)(width + 1));
     char *kind = (char *)malloc((size_t)(width + 1));
+    int  *dag_order = (int *)malloc((size_t)(p->task_count ? p->task_count : 1) * sizeof(int));
+    int  *topo;
 
-    if (!bar || !kind) { free(bar); free(kind); return; }
+    if (!bar || !kind) { free(bar); free(kind); free(dag_order); return; }
 
-    /* Pass 1 — project end */
+    /* DAG order: 1-based topological position per task (0 = not placed / cycle) */
+    if (dag_order)
+        for (i = 0; i < p->task_count; i++) dag_order[i] = 0;
+    topo = topo_sort((Project *)p, &n);
+    if (topo && dag_order)
+        for (i = 0; i < n; i++) dag_order[topo[i]] = i + 1;
+    free(topo);
+
+    /* Pass 1 - project end */
     for (i = 0; i < p->task_count; i++)
         if (p->tasks[i]->sched_end > project_end)
             project_end = p->tasks[i]->sched_end;
@@ -66,7 +89,7 @@ void render_gantt(const Project *p, const Company *c, int width) {
            ANSI_BOLD, project_end, ANSI_RESET);
     printf("  Legend: %s#%s optimistic  %s~%s expected  %s-%s pessimistic overrun\n",
            ANSI_BOLD, ANSI_RESET, ANSI_DIM, ANSI_RESET, ANSI_YELLOW, ANSI_RESET);
-    printf("%-24s  %-15s  %-20s |", "Task", "Criticality", "Assignee");
+    printf("%-22s  %-14s  %-18s  %-4s |", "Task", "Criticality", "Assignee", "DAG");
     for (j = 0; j < width; j++) printf(j % 10 == 0 ? "|" : "-");
     printf("\n");
 
@@ -80,11 +103,13 @@ void render_gantt(const Project *p, const Company *c, int width) {
         build_bar(t, project_end, width, bar, kind);
 
         /* Left columns */
-        printf("%-24s  ", t->title);
-        if (t->is_critical) printf("%s%-15s%s  ", ANSI_RED,    "[CRITICAL]",     ANSI_RESET);
-        else                printf("%s%-15s%s  ", ANSI_DIM,    "[NOT CRITICAL]",  ANSI_RESET);
-        if (assignee)       printf("%-20s |", assignee->name);
-        else                printf("%s%-20s%s |", ANSI_YELLOW, "[UNASSIGNED]",    ANSI_RESET);
+        printf("%-22.22s  ", t->title);
+        if (t->is_critical) printf("%s%-14s%s  ", ANSI_RED,    "[CRITICAL]",     ANSI_RESET);
+        else                printf("%s%-14s%s  ", ANSI_DIM,    "[NOT CRITICAL]",  ANSI_RESET);
+        if (assignee)       printf("%-18.18s  ", assignee->name);
+        else                printf("%s%-18s%s  ", ANSI_YELLOW, "[UNASSIGNED]",    ANSI_RESET);
+        if (dag_order && dag_order[i] > 0) printf("%-4d |", dag_order[i]);
+        else                               printf("%-4s |", "-");
 
         /* Bar */
         for (j = 0; j < width; j++) {
@@ -107,6 +132,7 @@ void render_gantt(const Project *p, const Company *c, int width) {
 
     free(bar);
     free(kind);
+    free(dag_order);
 }
 
 /* ---- Task dependency chart ---------------------------------------------- */

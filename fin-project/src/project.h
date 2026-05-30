@@ -12,8 +12,8 @@ typedef struct {
     char            save_dir[256];      /* bundle directory; empty = not set */
     Date            start_date;
 
-    Task           *start_node;         /* [START] — zero-duration source node */
-    Task           *end_node;           /* [END]   — zero-duration sink node   */
+    Task           *start_node;         /* [START] - zero-duration source node */
+    Task           *end_node;           /* [END]   - zero-duration sink node   */
 
     Task          **tasks;
     int             task_count;

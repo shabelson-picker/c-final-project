@@ -8,7 +8,7 @@
 typedef struct {
     int             id;
     char            name[MAX_NAME_LEN];
-    char            role[MAX_NAME_LEN];     /* role name — maps to roles.cfg */
+    char            role[MAX_NAME_LEN];     /* role name - maps to roles.cfg */
     uint32_t        skills;                 /* bitmask of Skill values */
     float           availability;           /* 0.0 - 1.0 fraction of a workday */
     DynamicIntArray project_ids;            /* company project IDs this member is on */

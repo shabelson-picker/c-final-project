@@ -190,6 +190,8 @@ Project* project_load(const char* dir) {
 	Milestone* cur_ms = NULL;
 	Date start = { 2026, 1, 1 };
 	char name[MAX_NAME_LEN] = "Untitled";
+	int member_ids_buf[64];           /* roster (master) buffered from meta */
+	int member_ids_n = 0;
 
 	snprintf(path, MAX_PATH_LEN, "%s\\project.yaml", dir);
 	f = fopen(path, "r");
@@ -215,7 +217,12 @@ Project* project_load(const char* dir) {
 		if (!split_kv(trimmed, key, sizeof(key), val, sizeof(val))) continue;
 
 		switch (sec) {
-		case S_META:       parse_meta(key, val, name, &start);       break;
+		case S_META:
+			if (strcmp(key, "member_ids") == 0)
+				member_ids_n = parse_int_array(val, member_ids_buf, 64);
+			else
+				parse_meta(key, val, name, &start);
+			break;
 		case S_TASKS:      if (cur_task && p) parse_task(p, cur_task, key, val); break;
 		case S_MILESTONES: if (cur_ms && p) parse_milestone(p, cur_ms, key, val); break;
 		default: break;
@@ -224,6 +231,16 @@ Project* project_load(const char* dir) {
 
 	fclose(f);
 	if (!p) p = project_create(name, start);
+
+	/* Restore roster (master): p->member_ids. The apprentice (m->project_ids)
+	 * is rebuilt company-wide once all projects are loaded. */
+	{
+		int j;
+		for (j = 0; j < member_ids_n; j++)
+			if (dia_find_index(&p->member_ids, member_ids_buf[j]) == -1)
+				dia_sort_insert(&p->member_ids, member_ids_buf[j]);
+	}
+
 	strncpy(p->save_dir, dir, sizeof(p->save_dir) - 1);
 	return p;
 }
@@ -237,7 +254,7 @@ int company_save(const Company* c) {
 
 	_mkdir(c->save_dir);
 
-	/* company.yaml — metadata */
+	/* company.yaml - metadata */
 	snprintf(path, MAX_PATH_LEN, "%s\\company.yaml", c->save_dir);
 	f = fopen(path, "w");
 	if (!f) { printf("  Save error: %s\n", strerror(errno)); return 0; }
@@ -245,7 +262,7 @@ int company_save(const Company* c) {
 	write_str(f, "name", c->name, 2);
 	fclose(f);
 
-	/* team.yaml — all company members */
+	/* team.yaml - all company members */
 	snprintf(path, MAX_PATH_LEN, "%s\\team.yaml", c->save_dir);
 	f = fopen(path, "w");
 	if (!f) { printf("  Save error: %s\n", strerror(errno)); return 0; }
@@ -258,11 +275,12 @@ int company_save(const Company* c) {
 		write_str(f, "role", m->role, 4);
 		write_int(f, "skills", (int)m->skills, 4);
 		write_float(f, "availability", m->availability, 4);
-		write_int_array(f, "project_ids", m->project_ids.data, m->project_ids.count, -999, 4);
+		/* project_ids (apprentice) is NOT saved - it is derived from each
+		 * project's member_ids (master) and rebuilt on load. */
 	}
 	fclose(f);
 
-	/* projects/ — one bundle per project */
+	/* projects/ - one bundle per project */
 	snprintf(path, MAX_PATH_LEN, "%s\\projects", c->save_dir);
 	_mkdir(path);
 	for (i = 0; i < c->project_count; i++) {
@@ -273,6 +291,24 @@ int company_save(const Company* c) {
 	}
 
 	return 1;
+}
+
+/* Rebuild each member's project_ids (apprentice) from every project's
+ * member_ids (master). Call after all projects are loaded. */
+static void rebuild_member_project_ids(Company* c) {
+	int pi, k;
+	for (k = 0; k < c->member_count; k++) {
+		dia_free(&c->members[k]->project_ids);
+		dia_init(&c->members[k]->project_ids);
+	}
+	for (pi = 0; pi < c->project_count; pi++) {
+		Project* p = c->projects[pi];
+		for (k = 0; k < p->member_ids.count; k++) {
+			TeamMember* m = company_find_member(c, p->member_ids.data[k]);
+			if (m && dia_find_index(&m->project_ids, pi) == -1)
+				dia_sort_insert(&m->project_ids, pi);
+		}
+	}
 }
 
 Company* company_load(const char* dir) {
@@ -323,7 +359,7 @@ Company* company_load(const char* dir) {
 		fclose(f);
 	}
 
-	/* projects/ — load each subdirectory */
+	/* projects/ - load each subdirectory */
 	snprintf(path, MAX_PATH_LEN, "%s\\projects", dir);
 	{
 		struct _finddata_t fd; intptr_t h;
@@ -338,13 +374,13 @@ Company* company_load(const char* dir) {
 					snprintf(proj_dir, MAX_PATH_LEN, "%s\\%s", path, fd.name);
 					{
 						Project* p = project_load(proj_dir);
-						if (p && c->project_count < c->project_capacity) {
+						if (p) {
 							if (c->project_count >= c->project_capacity) {
 								int nc = c->project_capacity * 2;
 								Project** tmp = (Project**)realloc(c->projects, nc * sizeof(Project*));
 								if (tmp) { c->projects = tmp; c->project_capacity = nc; }
 							}
-							c->projects[c->project_count++] = p;
+							if (c->project_count < c->project_capacity) c->projects[c->project_count++] = p; else project_destroy(p);
 						}
 					}
 				}
@@ -353,5 +389,6 @@ Company* company_load(const char* dir) {
 		}
 	}
 
+	rebuild_member_project_ids(c);
 	return c;
 }

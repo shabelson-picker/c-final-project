@@ -1,4 +1,4 @@
-# Project Forge — Design Brief
+# Project Forge - Design Brief
 **Version 1.0 | May 2026**
 
 ---
@@ -10,7 +10,7 @@ a portfolio system where multiple projects coexist, teams are shared across proj
 and every action is governed by a role-based privilege system loaded from configuration.
 
 The tool sits at the junction of planning, scheduling, resource optimization, and
-reporting — serving everyone from the executive reading a portfolio Gantt to the
+reporting - serving everyone from the executive reading a portfolio Gantt to the
 developer checking their task assignments.
 
 ---
@@ -36,9 +36,9 @@ Each role has a set of privilege flags. One company may have "Project Manager" a
 system adapts to the company's structure.
 
 ### Authentication
-Lightweight — no passwords. On launch: "Who are you?" — pick from the member list.
+Lightweight - no passwords. On launch: "Who are you?" - pick from the member list.
 The session then runs under that member's role and privileges.
-A special **System Admin** role always exists (sudo — all privileges) for initial
+A special **System Admin** role always exists (sudo - all privileges) for initial
 project setup. Members can switch active role from the main menu if they hold
 multiple roles.
 
@@ -111,14 +111,14 @@ to minimize total project duration while balancing workload.
 
 **Constraints:**
 - Member must have all required skills for the task
-- Member availability (0.0–1.0 fraction of a work day)
+- Member availability (0.0-1.0 fraction of a work day)
 - No member double-booked on overlapping tasks (future: parallel assignment)
 
 **Algorithm options (in order of complexity):**
-1. **Greedy ranked** — for each task on critical path first, assign best-fit member
+1. **Greedy ranked** - for each task on critical path first, assign best-fit member
    (skill match score + availability). Current implementation, improve ranking.
-2. **Backtracking** — exhaustive search with pruning. Optimal for small teams (<10).
-3. **Bipartite matching** — Hungarian algorithm. Optimal, O(n³).
+2. **Backtracking** - exhaustive search with pruning. Optimal for small teams (<10).
+3. **Bipartite matching** - Hungarian algorithm. Optimal, O(n³).
 
 **MVP target:** Greedy ranked with skill-match scoring and workload balancing penalty.
 **Final target:** Backtracking with pruning, presented as "optimizer" in the menu.
@@ -171,7 +171,7 @@ to minimize total project duration while balancing workload.
 
 ---
 
-## MVP Scope (Beta — Tomorrow)
+## MVP Scope (Beta - Tomorrow)
 
 - Single project, all menus working
 - Cycle detection on link

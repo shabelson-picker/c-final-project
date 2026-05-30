@@ -1,1 +1,1 @@
-/* ui.c — superseded by menu_company in menus.c */
+/* ui.c - superseded by menu_company in menus.c */

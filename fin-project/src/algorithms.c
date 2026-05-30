@@ -7,7 +7,7 @@
 #define MAX_ASSIGN_PASSES 8
 
 /* =========================================================================
- * Topological sort — Kahn's algorithm
+ * Topological sort - Kahn's algorithm
  * Considers both pre_ids (logical) and work_pre_ids (resource) edges.
  * ========================================================================= */
 
@@ -68,17 +68,19 @@ int *topo_sort(Project *p, int *out_count) {
 }
 
 /* =========================================================================
- * Effective duration — strategy-dependent
+ * Effective duration - strategy-dependent
  * ========================================================================= */
 
 static float effective_duration(const Task *t, ScheduleStrategy s) {
     if (s == SCHED_RISK_WEIGHTED_CRITICAL)
         return t->pert_expected * (1.0f + t->risk * 0.5f);
+    if (s == SCHED_PESSIMISTIC)
+        return t->pert_max;
     return t->pert_expected;
 }
 
 /* =========================================================================
- * Forward pass — earliest start / end per task
+ * Forward pass - earliest start / end per task
  * ========================================================================= */
 
 void forward_pass(Project *p, const int *order, int n, ScheduleStrategy s) {
@@ -102,7 +104,7 @@ void forward_pass(Project *p, const int *order, int n, ScheduleStrategy s) {
 }
 
 /* =========================================================================
- * Backward pass — latest start, slack, critical path
+ * Backward pass - latest start, slack, critical path
  * ========================================================================= */
 
 static int has_any_successor(Project *p, const Task *t, int n) {
@@ -190,7 +192,7 @@ void schedule_print_report(const Project *p) {
 }
 
 /* =========================================================================
- * Greedy assignment — helper functions
+ * Greedy assignment - helper functions
  * ========================================================================= */
 
 static void clear_work_assignments(Project *p) {
@@ -231,16 +233,19 @@ static int find_best_member(const Company *c, const Project *p,
     return best_mi;
 }
 
-static void warn_no_member(const Task *t) {
-    int k, first = 1;
-    printf("  [WARNING] No qualified member for [%d] %s — missing: [", t->id, t->title);
-    for (k = 0; k < 8; k++)
-        if (t->required_skills & (1u << k)) {
-            if (!first) printf(", ");
-            printf("%s", SKILL_NAMES[k]);
-            first = 0;
-        }
-    printf("]\n");
+/* Suggest a company member NOT on the project roster who has all of the task's
+ * required skills. Returns the member id, or -1 if none qualifies. Pure (no I/O)
+ * so the UI can drive the "add to project?" decision. Relies on p->member_ids
+ * being sorted (dia_find_index = bsearch). */
+int suggest_company_member(const Company *c, const Project *p, const Task *t) {
+    int mi;
+    for (mi = 0; mi < c->member_count; mi++) {
+        TeamMember *m = c->members[mi];
+        if (!team_member_has_skills(m, t->required_skills)) continue;
+        if (dia_find_index(&p->member_ids, m->id) != -1) continue;  /* already on roster */
+        return m->id;
+    }
+    return -1;
 }
 
 static void apply_work_dep_if_conflict(Task *t, int best_mi,
@@ -260,7 +265,8 @@ static void update_member_state(Task *t, int best_mi,
     member_last_task[best_mi] = t->id;
 }
 
-/* One assignment pass. Returns 1 if all tasks were assigned, 0 otherwise. */
+/* One assignment pass. Returns 1 if all tasks were assigned, 0 otherwise.
+ * Unassignable tasks are left with assignee_id == -1 for the caller to resolve. */
 static int assignment_pass(Company *c, Project *p, Task **sorted,
                             int *member_free_day, int *member_last_task) {
     int i, j, all_assigned = 1;
@@ -285,7 +291,7 @@ static int assignment_pass(Company *c, Project *p, Task **sorted,
 
         best_mi = find_best_member(c, p, t, member_free_day);
 
-        if (best_mi == -1) { warn_no_member(t); all_assigned = 0; continue; }
+        if (best_mi == -1) { all_assigned = 0; continue; }
 
         apply_work_dep_if_conflict(t, best_mi, member_free_day, member_last_task);
 
@@ -296,12 +302,72 @@ static int assignment_pass(Company *c, Project *p, Task **sorted,
 }
 
 /* =========================================================================
+ * Resource-overlap resolution (fixpoint)
+ * Serialize any two same-assignee tasks whose scheduled windows overlap by
+ * adding a work_pre edge (the later-starting task waits for the earlier one),
+ * rescheduling, and repeating until a full scan adds nothing. Pushing one task
+ * can create a fresh overlap with a third, so this MUST iterate to a fixpoint.
+ * Edges are oriented by current sched_start, so the graph stays acyclic;
+ * bounded by the number of same-member task pairs.
+ * ========================================================================= */
+
+/* Sort key: group by assignee, then by start day, then by id (stable order). */
+static int cmp_by_assignee_then_start(const void *a, const void *b) {
+    const Task *ta = *(const Task * const *)a;
+    const Task *tb = *(const Task * const *)b;
+    if (ta->assignee_id != tb->assignee_id) return ta->assignee_id - tb->assignee_id;
+    if (ta->sched_start != tb->sched_start) return ta->sched_start - tb->sched_start;
+    return ta->id - tb->id;
+}
+
+static void resolve_resource_overlaps(Project *p, ScheduleStrategy s) {
+    int iter, max_iter = p->task_count * p->task_count + 1;
+    Task **bymember = (Task **)malloc(p->task_count * sizeof(Task *));
+    if (!bymember) return;
+
+    for (iter = 0; iter < max_iter; iter++) {
+        int added = 0, i, k;
+
+        if (!schedule_project(p, s)) break;   /* cycle detected - bail */
+
+        /* Group tasks by assignee, sorted by start within each member. Two of a
+         * member's tasks can only overlap if they are neighbours in this order
+         * (sorted-interval property), so a single linear scan suffices. */
+        memcpy(bymember, p->tasks, p->task_count * sizeof(Task *));
+        qsort(bymember, p->task_count, sizeof(Task *), cmp_by_assignee_then_start);
+
+        for (i = 1; i < p->task_count; i++) {
+            Task *prev = bymember[i - 1];
+            Task *cur  = bymember[i];
+            int dup = 0;
+
+            if (prev->assignee_id == -1 || cur->assignee_id != prev->assignee_id)
+                continue;
+            if (cur->sched_start >= prev->sched_end)   /* sorted: prev starts first */
+                continue;                              /* no overlap */
+
+            /* work_pre_ids is unsorted - linear contains check */
+            for (k = 0; k < cur->work_pre_ids.count; k++)
+                if (cur->work_pre_ids.data[k] == prev->id) { dup = 1; break; }
+            if (dup) continue;
+
+            dia_append(&cur->work_pre_ids, prev->id);   /* earlier -> later */
+            added = 1;
+        }
+
+        if (!added) break;   /* fixpoint: no overlaps remain */
+    }
+
+    free(bymember);
+}
+
+/* =========================================================================
  * Public greedy assignment entry point
  * ========================================================================= */
 
-void assign_members_greedy(Company *c, int project_idx) {
+void assign_members_greedy(Company *c, int project_idx, ScheduleStrategy strategy) {
     Project  *p;
-    int       pass;
+    int       pass, prev_assigned;
     int      *member_free_day;
     int      *member_last_task;
     Task    **sorted;
@@ -309,8 +375,13 @@ void assign_members_greedy(Company *c, int project_idx) {
     if (project_idx < 0 || project_idx >= c->project_count) return;
     p = c->projects[project_idx];
 
+    if (p->member_ids.count == 0) {
+        printf("  No members on project roster. Add members first (option 5 in project menu).\n");
+        return;
+    }
+
     clear_work_assignments(p);
-    schedule_project(p, SCHED_EARLIEST_DEADLINE);
+    schedule_project(p, strategy);
 
     member_free_day  = (int *)calloc(c->member_count, sizeof(int));
     member_last_task = (int *)malloc(c->member_count * sizeof(int));
@@ -321,11 +392,21 @@ void assign_members_greedy(Company *c, int project_idx) {
         return;
     }
 
+    prev_assigned = -1;
     for (pass = 0; pass < MAX_ASSIGN_PASSES; pass++) {
+        int assigned_count = 0, i;
         sort_tasks_by_start(sorted, p->tasks, p->task_count);
         if (assignment_pass(c, p, sorted, member_free_day, member_last_task)) break;
-        schedule_project(p, SCHED_EARLIEST_DEADLINE);
+        for (i = 0; i < p->task_count; i++)
+            if (p->tasks[i]->assignee_id != -1) assigned_count++;
+        if (assigned_count == prev_assigned) break;  /* no progress - stop */
+        prev_assigned = assigned_count;
+        schedule_project(p, strategy);
     }
+
+    /* Greedy only catches conflicts visible in the pre-push schedule; this
+     * loop resolves any overlaps that emerge after tasks are pushed. */
+    resolve_resource_overlaps(p, strategy);
 
     printf("  Assignment complete (%d pass%s).\n", pass + 1, pass ? "es" : "");
 

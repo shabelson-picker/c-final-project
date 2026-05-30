@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "constants.h"
 
-/* Skill bitmask — combine with | to require multiple skills */
+/* Skill bitmask - combine with | to require multiple skills */
 typedef enum {
     SKILL_NONE      = 0,
     SKILL_FRONTEND  = 1 << 0,
@@ -18,7 +18,7 @@ typedef enum {
 } Skill;
 
 #define SKILL_COUNT 8
-/* Display names — index i maps to Skill (1 << i) */
+/* Display names - index i maps to Skill (1 << i) */
 static const char * const SKILL_NAMES[SKILL_COUNT] = {
     "Frontend", "Backend", "Hardware", "Embedded",
     "QA", "DevOps", "Design", "PM"

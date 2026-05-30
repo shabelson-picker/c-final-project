@@ -55,6 +55,17 @@ int dia_remove(DynamicIntArray *a, int value) {
     return 0;
 }
 
+/* Order-preserving remove for a sorted array: shift the tail down so the
+ * array stays sorted (keeps dia_find_index / bsearch valid). */
+int dia_sort_remove(DynamicIntArray *a, int value) {
+    int i = dia_find_index(a, value);
+    if (i == -1) return 0;
+    for (; i < a->count - 1; i++)
+        a->data[i] = a->data[i + 1];
+    a->count--;
+    return 1;
+}
+
 
 int dia_insert(DynamicIntArray* a,int index, int value) 
 {

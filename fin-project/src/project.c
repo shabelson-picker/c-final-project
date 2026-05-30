@@ -96,15 +96,38 @@ Milestone* project_add_milestone(Project* p, const char* name, int deadline_day,
 /* ---- remove entities ---------------------------------------------------- */
 
 int project_remove_task(Project* p, int task_id) {
-	int i;
-	for (i = 0; i < p->task_count; i++) {
-		if (p->tasks[i]->id == task_id) {
-			task_destroy(p->tasks[i]);
-			p->tasks[i] = p->tasks[--p->task_count];
-			return 1;
+	int i, j, vidx = -1;
+	Task* victim = NULL;
+
+	for (i = 0; i < p->task_count; i++)
+		if (p->tasks[i]->id == task_id) { victim = p->tasks[i]; vidx = i; break; }
+	if (!victim) return 0;
+
+	/* Detach from every predecessor's post list; reconnect orphans to END. */
+	for (j = 0; j < victim->pre_ids.count; j++) {
+		Task* pre = project_find_task(p, victim->pre_ids.data[j]);
+		if (!pre) continue;
+		task_remove_post(pre, task_id);
+		if (pre->id != START_NODE_ID && pre->post_ids.count == 0) {
+			task_add_post(pre, END_NODE_ID);
+			task_add_pre(p->end_node, pre->id);
 		}
 	}
-	return 0;
+
+	/* Detach from every successor's pre list; reconnect orphans to START. */
+	for (j = 0; j < victim->post_ids.count; j++) {
+		Task* post = project_find_task(p, victim->post_ids.data[j]);
+		if (!post) continue;
+		task_remove_pre(post, task_id);
+		if (post->id != END_NODE_ID && post->pre_ids.count == 0) {
+			task_add_pre(post, START_NODE_ID);
+			task_add_post(p->start_node, post->id);
+		}
+	}
+
+	task_destroy(victim);
+	p->tasks[vidx] = p->tasks[--p->task_count];
+	return 1;
 }
 
 /* ---- lookups ------------------------------------------------------------ */
@@ -146,11 +169,11 @@ int project_link_tasks(Project* p, int pre_id, int post_id) {
 	{
 		return 0;
 	}
-	/* post now has a real predecessor — detach from start_node */
+	/* post now has a real predecessor - detach from start_node */
 	task_remove_post(p->start_node, post_id);
 	task_remove_pre(post, START_NODE_ID);
 
-	/* pre now has a real successor — detach from end_node */
+	/* pre now has a real successor - detach from end_node */
 	task_remove_post(pre, END_NODE_ID);
 	task_remove_pre(p->end_node, pre_id);
 

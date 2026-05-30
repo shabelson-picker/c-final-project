@@ -20,11 +20,11 @@ typedef struct {
     float      risk;            /* 0.0 = no risk, 1.0 = critical       */
     uint32_t   required_skills; /* bitmask of Skill values             */
 
-    /* Dependency arrays — owned, heap-allocated */
+    /* Dependency arrays - owned, heap-allocated */
     DynamicIntArray pre_ids;      /* logical predecessors (DAG edges)         */
     DynamicIntArray post_ids;     /* logical successors  (DAG edges)          */
     DynamicIntArray alt_ids;      /* plan-B alternatives if cancelled         */
-    DynamicIntArray work_pre_ids; /* resource constraints — must not enter DAG */
+    DynamicIntArray work_pre_ids; /* resource constraints - must not enter DAG */
 
     int        assignee_id;     /* -1 = unassigned                     */
     int        milestone_id;    /* -1 = none                           */
