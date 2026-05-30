@@ -5,6 +5,26 @@
 
 #define INIT_CAP 8
 
+/* ---- calendar helpers --------------------------------------------------- */
+
+int date_is_valid(Date d) {
+    return d.year > 0 && d.month >= 1 && d.month <= 12
+        && d.day >= 1 && d.day <= 31;
+}
+
+/* Days-from-civil (Howard Hinnant): serial day number since 1970-01-01.
+ * Exact for the proleptic Gregorian calendar; lets schedule offsets in
+ * different projects be placed on one absolute timeline. */
+long date_to_days(Date d) {
+    int  y = d.year - (d.month <= 2);
+    long era = (y >= 0 ? y : y - 399) / 400;
+    unsigned yoe = (unsigned)(y - era * 400);                      /* [0, 399]   */
+    unsigned doy = (153u * (d.month + (d.month > 2 ? -3 : 9)) + 2) / 5
+                 + (unsigned)d.day - 1;                            /* [0, 365]   */
+    unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;          /* [0, 146096]*/
+    return era * 146097 + (long)doe - 719468;
+}
+
 static int ensure_task_cap(Project *p) {
     if (p->task_count < p->task_capacity) return 1;
     int new_cap = p->task_capacity * 2;

@@ -37,6 +37,9 @@ typedef struct {
     int        slack;           /* latest_start - sched_start            */
     int        is_critical;     /* 1 if on critical path                 */
     int        topo_order;      /* 1-based topological position (0 = unscheduled) */
+    int        min_start;       /* earliest-start floor (project-relative): cross-project
+                                 * assignee commitments / pinned blocks. Transient -
+                                 * recomputed each assignment run, not persisted. */
 } Task;
 
 /* ---- Lifecycle ---------------------------------------------------------- */

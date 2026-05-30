@@ -7,6 +7,17 @@
 
 /* START_NODE_ID and END_NODE_ID are defined in constants.h */
 
+/// <summary>True if a Date is a plausible Gregorian calendar date (year &gt; 0, month 1-12, day 1-31).</summary>
+/// <param name="d">Date to validate.</param>
+/// <returns>1 if usable for calendar math, 0 otherwise.</returns>
+int        date_is_valid(Date d);
+
+/// <summary>Serial day number for a date (days since 1970-01-01, via the days-from-civil
+/// algorithm). Lets per-project schedule offsets be compared on one absolute timeline.</summary>
+/// <param name="d">A valid Gregorian date (see date_is_valid).</param>
+/// <returns>Signed day count relative to the 1970-01-01 epoch.</returns>
+long       date_to_days(Date d);
+
 typedef struct {
     char            name[MAX_NAME_LEN];
     char            save_dir[256];      /* bundle directory; empty = not set */

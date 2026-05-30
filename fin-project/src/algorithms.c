@@ -99,6 +99,7 @@ void forward_pass(Project *p, const int *order, int n, ScheduleStrategy s) {
             if (pre && pre->sched_end > earliest) earliest = pre->sched_end;
         }
 
+        if (t->min_start > earliest) earliest = t->min_start;  /* cross-project / pinned floor */
         t->sched_start = earliest;
         t->sched_end   = earliest + (int)(effective_duration(t, s) + 0.5f);
     }
@@ -202,6 +203,7 @@ static void clear_work_assignments(Project *p) {
     for (i = 0; i < p->task_count; i++) {
         dia_free(&p->tasks[i]->work_pre_ids);
         dia_init(&p->tasks[i]->work_pre_ids);
+        p->tasks[i]->min_start = 0;            /* recomputed from cross-project floor */
         if (!p->tasks[i]->manually_assigned)   /* keep pinned assignments */
             p->tasks[i]->assignee_id = -1;
     }
@@ -268,14 +270,61 @@ static void update_member_state(Task *t, int best_mi,
     member_last_task[best_mi] = t->id;
 }
 
+/* Cross-project member calendar.
+ * For every company member, fill floor[mi] with the project-relative day before
+ * which they are unavailable because of work already committed in OTHER projects:
+ *   floor = max over other-project tasks assigned to the member of
+ *           (other.start_date + task.sched_end) - this.start_date
+ * clamped at 0. This serializes a shared member across projects (the bug where
+ * member_free_day reset to 0 per project, so one person started day 0 everywhere).
+ * Backward compatible: if this or another project has no valid start_date, that
+ * project contributes nothing, so single-project / undated setups behave as before.
+ * floor[] must have room for c->member_count ints. */
+static void compute_external_floor(const Company *c, int project_idx, int *floor) {
+    const Project *self = c->projects[project_idx];
+    long self_start;
+    int pi, ti, mi;
+
+    for (mi = 0; mi < c->member_count; mi++) floor[mi] = 0;
+    if (!date_is_valid(self->start_date)) return;
+    self_start = date_to_days(self->start_date);
+
+    for (pi = 0; pi < c->project_count; pi++) {
+        const Project *q;
+        long q_start;
+        if (pi == project_idx) continue;
+        q = c->projects[pi];
+        if (!date_is_valid(q->start_date)) continue;
+        q_start = date_to_days(q->start_date);
+
+        for (ti = 0; ti < q->task_count; ti++) {
+            const Task *t = q->tasks[ti];
+            long abs_end;
+            int  rel;
+            if (t->assignee_id == -1) continue;
+            for (mi = 0; mi < c->member_count; mi++)
+                if (c->members[mi]->id == t->assignee_id) break;
+            if (mi == c->member_count) continue;       /* assignee left the company */
+            abs_end = q_start + t->sched_end;           /* day the commitment frees up */
+            rel     = (int)(abs_end - self_start);      /* in this project's day frame  */
+            if (rel > floor[mi]) floor[mi] = rel;
+        }
+    }
+}
+
 /* One assignment pass. Returns 1 if all tasks were assigned, 0 otherwise.
- * Unassignable tasks are left with assignee_id == -1 for the caller to resolve. */
+ * Unassignable tasks are left with assignee_id == -1 for the caller to resolve.
+ * member_free_day is seeded from the cross-project floor so a member committed
+ * elsewhere is not booked from day 0 here. */
 static int assignment_pass(Company *c, Project *p, Task **sorted,
+                            const int *floor,
                             int *member_free_day, int *member_last_task) {
     int i, j, all_assigned = 1;
 
-    memset(member_free_day, 0, c->member_count * sizeof(int));
-    for (i = 0; i < c->member_count; i++) member_last_task[i] = -1;
+    for (i = 0; i < c->member_count; i++) {
+        member_free_day[i]  = floor[i];
+        member_last_task[i] = -1;
+    }
 
     for (i = 0; i < p->task_count; i++) {
         Task *t     = sorted[i];
@@ -285,6 +334,7 @@ static int assignment_pass(Company *c, Project *p, Task **sorted,
         if (t->assignee_id != -1) {
             for (j = 0; j < c->member_count; j++)
                 if (c->members[j]->id == t->assignee_id) {
+                    t->min_start        = floor[j];   /* pinned task still waits on other projects */
                     member_free_day[j]  = t->sched_end;
                     member_last_task[j] = t->id;
                     break;
@@ -299,6 +349,7 @@ static int assignment_pass(Company *c, Project *p, Task **sorted,
         apply_work_dep_if_conflict(t, best_mi, member_free_day, member_last_task);
 
         t->assignee_id = c->members[best_mi]->id;
+        t->min_start   = floor[best_mi];   /* cross-project earliest-start floor */
         update_member_state(t, best_mi, member_free_day, member_last_task);
     }
     return all_assigned;
@@ -373,6 +424,7 @@ void assign_members_greedy(Company *c, int project_idx, ScheduleStrategy strateg
     int       pass, prev_assigned;
     int      *member_free_day;
     int      *member_last_task;
+    int      *external_floor;
     Task    **sorted;
 
     if (project_idx < 0 || project_idx >= c->project_count) return;
@@ -388,18 +440,23 @@ void assign_members_greedy(Company *c, int project_idx, ScheduleStrategy strateg
 
     member_free_day  = (int *)calloc(c->member_count, sizeof(int));
     member_last_task = (int *)malloc(c->member_count * sizeof(int));
+    external_floor   = (int *)calloc(c->member_count, sizeof(int));
     sorted           = (Task **)malloc(p->task_count * sizeof(Task *));
 
-    if (!member_free_day || !member_last_task || !sorted) {
-        free(member_free_day); free(member_last_task); free(sorted);
+    if (!member_free_day || !member_last_task || !external_floor || !sorted) {
+        free(member_free_day); free(member_last_task); free(external_floor); free(sorted);
         return;
     }
+
+    /* Snapshot each member's commitments in OTHER projects once up front, so this
+     * project schedules around them instead of double-booking from day 0. */
+    compute_external_floor(c, project_idx, external_floor);
 
     prev_assigned = -1;
     for (pass = 0; pass < MAX_ASSIGN_PASSES; pass++) {
         int assigned_count = 0, i;
         sort_tasks_by_start(sorted, p->tasks, p->task_count);
-        if (assignment_pass(c, p, sorted, member_free_day, member_last_task)) break;
+        if (assignment_pass(c, p, sorted, external_floor, member_free_day, member_last_task)) break;
         for (i = 0; i < p->task_count; i++)
             if (p->tasks[i]->assignee_id != -1) assigned_count++;
         if (assigned_count == prev_assigned) break;  /* no progress - stop */
@@ -415,5 +472,6 @@ void assign_members_greedy(Company *c, int project_idx, ScheduleStrategy strateg
 
     free(member_free_day);
     free(member_last_task);
+    free(external_floor);
     free(sorted);
 }
