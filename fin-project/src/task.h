@@ -21,9 +21,10 @@ typedef struct {
     uint32_t   required_skills; /* bitmask of Skill values             */
 
     /* Dependency arrays — owned, heap-allocated */
-    DynamicIntArray pre_ids;    /* tasks that must finish before this  */
-    DynamicIntArray post_ids;   /* tasks that depend on this           */
-    DynamicIntArray alt_ids;    /* plan-B alternatives if cancelled    */
+    DynamicIntArray pre_ids;      /* logical predecessors (DAG edges)         */
+    DynamicIntArray post_ids;     /* logical successors  (DAG edges)          */
+    DynamicIntArray alt_ids;      /* plan-B alternatives if cancelled         */
+    DynamicIntArray work_pre_ids; /* resource constraints — must not enter DAG */
 
     int        assignee_id;     /* -1 = unassigned                     */
     int        milestone_id;    /* -1 = none                           */

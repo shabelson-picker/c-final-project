@@ -3,11 +3,6 @@
 #include <string.h>
 #include "team.h"
 
-static const char *SKILL_NAMES[] = {
-    "Frontend", "Backend", "Hardware", "Embedded",
-    "QA", "DevOps", "Design", "PM"
-};
-
 TeamMember *team_member_create(int id, const char *name, const char *role) {
     TeamMember *m = (TeamMember *)malloc(sizeof(TeamMember));
     if (!m) return NULL;

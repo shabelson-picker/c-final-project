@@ -17,6 +17,13 @@ typedef enum {
     SKILL_PM        = 1 << 7
 } Skill;
 
+#define SKILL_COUNT 8
+/* Display names — index i maps to Skill (1 << i) */
+static const char * const SKILL_NAMES[SKILL_COUNT] = {
+    "Frontend", "Backend", "Hardware", "Embedded",
+    "QA", "DevOps", "Design", "PM"
+};
+
 typedef enum {
     STATUS_TODO,
     STATUS_IN_PROGRESS,

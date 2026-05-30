@@ -7,7 +7,7 @@
 #include "constants.h"
 #include "menus.h"
 #include "company.h"
-#include "scheduler.h"
+#include "algorithms.h"
 #include "renderer.h"
 #include "dot_export.h"
 #include "persistence.h"
@@ -367,23 +367,19 @@ void menu_tasks(Project *p) {
 /* ---- member menu -------------------------------------------------------- */
 
 static uint32_t select_skills(void) {
-    static const char *SKILL_LABELS[] = {
-        "Frontend", "Backend", "Hardware", "Embedded",
-        "QA", "DevOps", "Design", "PM"
-    };
     uint32_t mask = 0;
     int choice, i;
 
     for (;;) {
         printf("\n  Skills checklist (enter number to toggle, 0 to confirm):\n");
-        for (i = 0; i < 8; i++)
+        for (i = 0; i < SKILL_COUNT; i++)
             printf("  [%s] %d. %s\n",
                    (mask & (1u << i)) ? "x" : " ",
-                   i + 1, SKILL_LABELS[i]);
+                   i + 1, SKILL_NAMES[i]);
 
         { int _r = read_nav("  > ", &choice); if (_r != 1) continue; }
         if (choice == 0) break;
-        if (choice >= 1 && choice <= 8)
+        if (choice >= 1 && choice <= SKILL_COUNT)
             mask ^= (1u << (choice - 1));
     }
 
@@ -427,6 +423,9 @@ void menu_milestones(Project *p) {
 
 /* ---- schedule menu ------------------------------------------------------ */
 
+static Company *g_sched_company    = NULL;
+static int      g_sched_project_idx = -1;
+
 static int schedule_handler(Project *p, int choice) {
     switch (choice) {
         case 0: return 1;
@@ -438,13 +437,22 @@ static int schedule_handler(Project *p, int choice) {
             if (schedule_project(p, SCHED_RISK_WEIGHTED_CRITICAL))
                 printf("  Risk-weighted schedule computed.\n");
             break;
-        case 3: /* assign_members_greedy called from company context */ printf("  Use company > projects > assign.\n"); break;
-        case 4: schedule_print_report(p);  break;
-        case 5: render_gantt(p, GANTT_WIDTH); break;
-        case 6: render_dag(p);             break;
+        case 3:
+            assign_members_greedy(g_sched_company, g_sched_project_idx);
+            printf("  Members assigned.\n");
+            break;
+        case 4: schedule_print_report(p); break;
+        case 5: {
+            int strat;
+            printf("  1. Earliest Deadline    2. Risk-Weighted Critical Path\n");
+            { int _r = read_nav("  Strategy: ", &strat); if (_r != 1 || (strat != 1 && strat != 2)) break; }
+            schedule_project(p, strat == 1 ? SCHED_EARLIEST_DEADLINE : SCHED_RISK_WEIGHTED_CRITICAL);
+            render_gantt(p, g_sched_company, GANTT_WIDTH);
+            break;
+        }
+        case 6: render_dag(p);                break;
         case 7: {
-            char dot_path[MAX_PATH_LEN];
-            char exe_dir[MAX_PATH_LEN];
+            char dot_path[MAX_PATH_LEN], exe_dir[MAX_PATH_LEN];
             get_exe_dir(exe_dir, MAX_PATH_LEN);
             snprintf(dot_path, MAX_PATH_LEN, "%s%s.dot", exe_dir, p->name);
             export_dot(p, dot_path);
@@ -458,12 +466,16 @@ void menu_schedule(Company *c, int project_idx) {
     Project *p;
     if (project_idx < 0 || project_idx >= c->project_count) return;
     p = c->projects[project_idx];
+    g_sched_company     = c;
+    g_sched_project_idx = project_idx;
     crumb_push("Schedule");
     run_menu(p, NULL,
              "  1. Earliest Deadline    2. Risk-Weighted Critical Path\n"
              "  3. Assign members (greedy)    4. Report    5. Gantt    6. DAG    7. Export .dot    0. Back",
              schedule_handler);
     crumb_pop();
+    g_sched_company     = NULL;
+    g_sched_project_idx = -1;
 }
 
 /* ---- company team menu -------------------------------------------------- */

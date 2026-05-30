@@ -16,6 +16,7 @@ Task *task_create(int id, const char *title, const char *description) {
     dia_init(&t->pre_ids);
     dia_init(&t->post_ids);
     dia_init(&t->alt_ids);
+    dia_init(&t->work_pre_ids);
     t->id          = id;
     t->status      = STATUS_TODO;
     t->assignee_id = -1;
@@ -35,6 +36,7 @@ void task_destroy(Task *t) {
     dia_free(&t->pre_ids);
     dia_free(&t->post_ids);
     dia_free(&t->alt_ids);
+    dia_free(&t->work_pre_ids);
     free(t);
 }
 
@@ -83,10 +85,6 @@ int task_can_be_done_by(const Task *t, uint32_t member_skills) {
 }
 
 void task_print(const Task *t) {
-    static const char *SKILL_NAMES[] = {
-        "Frontend", "Backend", "Hardware", "Embedded",
-        "QA", "DevOps", "Design", "PM"
-    };
     int i, first = 1;
 
     printf("[%d] %-30s  %-12s  PERT:%.1f/%.1f/%.1f(exp=%.1f)  risk=%2.0f/10",

@@ -3,6 +3,7 @@
 #include <string.h>
 #include "renderer.h"
 #include "constants.h"
+#include "team.h"
 
 /* ANSI color codes */
 #define ANSI_RESET   "\033[0m"
@@ -27,78 +28,80 @@ static int day_to_col(int day, int project_end, int width) {
 }
 
 /*
- * Fill buf[0..width-1] with the Gantt bar for task t.
- * Legend:  '.' min-max uncertainty range
- *          '#' expected (likely) duration block
- * We print the buffer with colour after.
+ * Build a 3-zone bar for task t:
+ *   kind 1 '#' — optimistic zone  [sched_start .. sched_start+pert_min]
+ *   kind 2 '~' — expected zone    [sched_start+pert_min .. sched_end]
+ *   kind 3 '-' — pessimistic zone [sched_end .. sched_start+pert_max]
  */
 static void build_bar(const Task *t, int project_end, int width,
                       char *bar, char *kind) {
-    int col_min    = day_to_col((int)(t->sched_start + t->pert_min    + 0.5f), project_end, width);
-    int col_likely = day_to_col((int)(t->sched_start                         ), project_end, width);
-    int col_exp    = day_to_col(t->sched_end,                                  project_end, width);
-    int col_max    = day_to_col((int)(t->sched_start + t->pert_max    + 0.5f), project_end, width);
+    int col_start   = day_to_col(t->sched_start,                                   project_end, width);
+    int col_opt_end = day_to_col((int)(t->sched_start + t->pert_min  + 0.5f),      project_end, width);
+    int col_exp_end = day_to_col(t->sched_end,                                     project_end, width);
+    int col_pes_end = day_to_col((int)(t->sched_start + t->pert_max  + 0.5f),      project_end, width);
     int i;
 
     memset(bar,  ' ', (size_t)width);
     memset(kind, 0,   (size_t)width);
 
-    for (i = col_min; i <= col_max && i < width; i++) {
-        bar[i]  = '.';
-        kind[i] = 1;   /* uncertain range */
-    }
-    for (i = col_likely; i <= col_exp && i < width; i++) {
-        bar[i]  = '#';
-        kind[i] = 2;   /* expected block  */
-    }
+    for (i = col_start;   i <= col_opt_end && i < width; i++) { bar[i] = '#'; kind[i] = 1; }
+    for (i = col_opt_end; i <= col_exp_end && i < width; i++) { bar[i] = '~'; kind[i] = 2; }
+    for (i = col_exp_end; i <= col_pes_end && i < width; i++) { bar[i] = '-'; kind[i] = 3; }
 }
 
-void render_gantt(const Project *p, int width) {
+void render_gantt(const Project *p, const Company *c, int width) {
     int i, j, project_end = 0;
     char *bar  = (char *)malloc((size_t)(width + 1));
     char *kind = (char *)malloc((size_t)(width + 1));
 
     if (!bar || !kind) { free(bar); free(kind); return; }
 
-    /* Find project end */
+    /* Pass 1 — project end */
     for (i = 0; i < p->task_count; i++)
         if (p->tasks[i]->sched_end > project_end)
             project_end = p->tasks[i]->sched_end;
 
-    /* Header */
+
     printf("\n%s=== Gantt Chart  (project duration: %d days) ===%s\n",
            ANSI_BOLD, project_end, ANSI_RESET);
-    printf("%-28s |", "Task");
+    printf("  Legend: %s#%s optimistic  %s~%s expected  %s-%s pessimistic overrun\n",
+           ANSI_BOLD, ANSI_RESET, ANSI_DIM, ANSI_RESET, ANSI_YELLOW, ANSI_RESET);
+    printf("%-24s  %-15s  %-20s |", "Task", "Criticality", "Assignee");
     for (j = 0; j < width; j++) printf(j % 10 == 0 ? "|" : "-");
     printf("\n");
 
-    /* One row per task */
     for (i = 0; i < p->task_count; i++) {
-        Task *t = p->tasks[i];
-        const char *color = t->is_critical ? ANSI_RED : ANSI_GREEN;
+        Task       *t        = p->tasks[i];
+        const char *color    = t->is_critical ? ANSI_RED : ANSI_GREEN;
+        TeamMember *assignee = (c && t->assignee_id != -1)
+                               ? company_find_member((Company *)c, t->assignee_id)
+                               : NULL;
 
         build_bar(t, project_end, width, bar, kind);
 
-        printf("%-28s |", t->title);
+        /* Left columns */
+        printf("%-24s  ", t->title);
+        if (t->is_critical) printf("%s%-15s%s  ", ANSI_RED,    "[CRITICAL]",     ANSI_RESET);
+        else                printf("%s%-15s%s  ", ANSI_DIM,    "[NOT CRITICAL]",  ANSI_RESET);
+        if (assignee)       printf("%-20s |", assignee->name);
+        else                printf("%s%-20s%s |", ANSI_YELLOW, "[UNASSIGNED]",    ANSI_RESET);
+
+        /* Bar */
         for (j = 0; j < width; j++) {
-            if (kind[j] == 2) {
-                printf("%s%s%c%s", ANSI_BOLD, color, bar[j], ANSI_RESET);
-            } else if (kind[j] == 1) {
-                printf("%s%c%s", ANSI_DIM, bar[j], ANSI_RESET);
-            } else {
-                printf(" ");
-            }
+            if      (kind[j] == 1) printf("%s%s#%s", ANSI_BOLD, color, ANSI_RESET);
+            else if (kind[j] == 2) printf("%s~%s",   ANSI_DIM,         ANSI_RESET);
+            else if (kind[j] == 3) printf("%s-%s",   ANSI_YELLOW,      ANSI_RESET);
+            else                   printf(" ");
         }
-        printf("%s%s\n", t->is_critical ? "  [CRITICAL]" : "", ANSI_RESET);
+        printf("\n");
     }
 
     /* Milestone markers */
     for (i = 0; i < p->milestone_count; i++) {
-        Milestone *m = p->milestones[i];
-        int col = day_to_col(m->deadline_day, project_end, width);
+        Milestone *m   = p->milestones[i];
+        int        col = day_to_col(m->deadline_day, project_end, width);
         printf("%s%-28s |%s", ANSI_YELLOW, m->name, ANSI_RESET);
-        for (j = 0; j < width; j++)
-            printf(j == col ? "|" : " ");
+        for (j = 0; j < width; j++) printf(j == col ? "|" : " ");
         printf("%s  M%d (day %d)%s\n", ANSI_YELLOW, m->id, m->deadline_day, ANSI_RESET);
     }
 

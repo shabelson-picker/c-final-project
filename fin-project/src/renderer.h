@@ -2,6 +2,7 @@
 #define RENDERER_H
 
 #include "project.h"
+#include "company.h"
 
 /*
  * Gantt chart — one row per task.
@@ -9,7 +10,7 @@
  * Critical path tasks highlighted in red.
  * width: terminal character width for the timeline area.
  */
-void render_gantt(const Project *p, int width);
+void render_gantt(const Project *p, const Company *c, int width);
 
 /*
  * DAG view — ASCII dependency graph.
