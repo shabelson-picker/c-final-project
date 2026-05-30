@@ -1,0 +1,67 @@
+members:
+  -
+    id: 1
+    name: "shimi"
+    role: "master jedi"
+    skills: 149
+    availability: 1.0000
+  -
+    id: 2
+    name: "joe"
+    role: "Gimp"
+    skills: 52
+    availability: 1.0000
+  -
+    id: 3
+    name: "Alice Chen"
+    role: "Frontend Dev"
+    skills: 3
+    availability: 1.0000
+  -
+    id: 4
+    name: "Bob Smith"
+    role: "Embedded Engineer"
+    skills: 12
+    availability: 1.0000
+  -
+    id: 5
+    name: "Carol Wu"
+    role: "DevOps Engineer"
+    skills: 34
+    availability: 0.8000
+  -
+    id: 6
+    name: "David Kim"
+    role: "UX Designer"
+    skills: 65
+    availability: 1.0000
+  -
+    id: 7
+    name: "Eve Martinez"
+    role: "QA Engineer"
+    skills: 18
+    availability: 1.0000
+  -
+    id: 8
+    name: "Frank Lee"
+    role: "Project Manager"
+    skills: 131
+    availability: 0.7500
+  -
+    id: 9
+    name: "Grace Park"
+    role: "Systems Engineer"
+    skills: 14
+    availability: 1.0000
+  -
+    id: 10
+    name: "Hannah Brown"
+    role: "Full Stack Dev"
+    skills: 83
+    availability: 0.9000
+  -
+    id: 11
+    name: "jimi baloogi"
+    role: "mega mind"
+    skills: 203
+    availability: 1.0000

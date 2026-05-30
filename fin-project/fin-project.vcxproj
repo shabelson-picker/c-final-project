@@ -144,6 +144,7 @@
     <ClCompile Include="src\file_browser.c" />
     <ClCompile Include="src\dot_export.c" />
     <ClCompile Include="src\report_exporter.c" />
+    <ClCompile Include="src\ui.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\company.h" />
@@ -163,6 +164,7 @@
     <ClInclude Include="src\file_browser.h" />
     <ClInclude Include="src\dot_export.h" />
     <ClInclude Include="src\report_exporter.h" />
+    <ClInclude Include="src\ui.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

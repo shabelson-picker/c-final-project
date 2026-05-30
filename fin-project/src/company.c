@@ -6,6 +6,7 @@
 #include "persistence.h"
 #include "file_browser.h"
 #include "menus.h"
+#include "ui.h"
 
 #define INIT_CAP 8
 
@@ -173,11 +174,19 @@ Company *company_load_interactive(void) {
 }
 
 void company_print_summary(const Company *c) {
-    int i;
+    int i, j;
     printf("\n  Company: %s\n", c->name);
     printf("  Members: %d   Projects: %d\n", c->member_count, c->project_count);
-    printf("\n  Projects:\n");
-    for (i = 0; i < c->project_count; i++)
-        printf("    [%d] %s  (%d tasks)\n",
-               i, c->projects[i]->name, c->projects[i]->task_count);
+    cprintf(C_DIM, "  (# done  ~ in-progress  . todo)\n");
+    for (i = 0; i < c->project_count; i++) {
+        Project *p = c->projects[i];
+        int done = 0, prog = 0;
+        for (j = 0; j < p->task_count; j++) {
+            if      (p->tasks[j]->status == STATUS_DONE)        done++;
+            else if (p->tasks[j]->status == STATUS_IN_PROGRESS) prog++;
+        }
+        cprintf(ui_zebra(i), "    [%d] %-20.20s  %2d tasks  ", i, p->name, p->task_count);
+        ui_progress_bar(done, prog, p->task_count, 20);
+        printf("\n");
+    }
 }

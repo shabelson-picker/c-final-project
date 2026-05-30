@@ -1,0 +1,23 @@
+meta:
+  name: "Cobalt"
+  year: 2026
+  month: 6
+  day: 1
+  member_ids: [5]
+
+tasks:
+  -
+    id: 1
+    title: "Cobalt Backend Migration"
+    description: "Backend - Carol once more (clashes with Apollo + Borealis)"
+    status: 0
+    pert_min: 5.0000
+    pert_likely: 6.0000
+    pert_max: 8.0000
+    risk: 0.4000
+    required_skills: 2
+    assignee_id: -1
+    manually_assigned: 0
+    milestone_id: -1
+
+milestones:

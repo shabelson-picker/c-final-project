@@ -1,0 +1,60 @@
+digraph scheduler {
+  rankdir=TB;
+  graph [fontname="Helvetica", label="Project Mayhem Management - Scheduler / Assignment / Gantt", labelloc=t, fontsize=16];
+  node [shape=box, fontname="Helvetica", fontsize=10];
+  edge [fontname="Helvetica", fontsize=9, color="#555555"];
+
+  A [label="menu_schedule: Generate"];
+  B [shape=diamond, label="pick strategy\nearliest / risk / pessimistic"];
+  A -> B;
+
+  subgraph cluster_assign {
+    label="assign_members_greedy(c, idx, strategy)";
+    style=filled; color="#eef4ff";
+    C1 [label="clear_work_assignments\n(keep pinned)"];
+    C2 [label="schedule_project(strategy)"];
+    C3 [shape=diamond, label="pass loop\n(<= MAX_ASSIGN_PASSES)"];
+    C4 [label="sort tasks by sched_start"];
+    C5 [label="assignment_pass:\nfind_best_member per task,\nadd work_pre on member conflict"];
+    C6 [shape=diamond, label="all assigned?"];
+    C7 [label="schedule_project(strategy)"];
+    C8 [label="resolve_resource_overlaps"];
+    C1 -> C2 -> C3 -> C4 -> C5 -> C6;
+    C6 -> C7 [label="no (progress)"];
+    C7 -> C3;
+    C6 -> C8 [label="yes / stuck"];
+  }
+  B -> C1;
+
+  subgraph cluster_sp {
+    label="schedule_project (CPM)";
+    style=filled; color="#fff4e6";
+    S1 [label="topo_sort\n(Kahn: pre + work_pre)"];
+    S2 [label="forward_pass\nsched_start = max(pre, work_pre ends)"];
+    S3 [label="backward_pass\nlatest_start, slack, is_critical"];
+    S4 [label="stamp topo_order"];
+    S1 -> S2 -> S3 -> S4;
+  }
+  C2 -> S1 [style=dotted, label="calls"];
+
+  subgraph cluster_res {
+    label="resolve_resource_overlaps (fixpoint)";
+    style=filled; color="#f3e8ff";
+    R1 [label="schedule_project"];
+    R2 [label="group by assignee,\nsort by start"];
+    R3 [shape=diamond, label="adjacent same-member\noverlap?"];
+    R4 [label="add work_pre\n(earlier -> later)"];
+    R5 [label="done: no overlaps"];
+    R1 -> R2 -> R3;
+    R3 -> R4 [label="yes"];
+    R4 -> R1;
+    R3 -> R5 [label="none added"];
+  }
+  C8 -> R1 [style=dotted, label="calls"];
+
+  D [label="schedule_project(strategy)"];
+  E [shape=box, style=filled, fillcolor="#d8f5d8", label="render_gantt\n(rows by start, DAG-order column)"];
+  F [label="resolve_unassigned\n(cascade: suggest off-roster member)"];
+  G [label="company_save"];
+  C8 -> D -> E -> F -> G;
+}

@@ -1,0 +1,63 @@
+digraph "proj_1" {
+  rankdir=LR;
+  node [fontname="Helvetica" fontsize=11];
+  edge [color="#555555"];
+
+  0 [label="START" shape=circle style=filled fillcolor="#4CAF50" fontcolor=white];
+  end  [label="END"   shape=circle style=filled fillcolor="#607D8B" fontcolor=white];
+
+  1 [label="[1] Project Kickoff\nexp: 1.1d | risk: 1/10\nday 0-1 | slack: 0" style=filled fillcolor="#F44336" fontcolor=white];
+  2 [label="[2] Requirements Gathering\nexp: 4.3d | risk: 3/10\nday 1-5 | slack: 0" style=filled fillcolor="#F44336" fontcolor=white];
+  3 [label="[3] System Architecture Design\nexp: 3.2d | risk: 2/10\nday 5-8 | slack: 0" style=filled fillcolor="#F44336" fontcolor=white];
+  4 [label="[4] UI/UX Wireframes\nexp: 5.2d | risk: 2/10\nday 5-10 | slack: 1" style=filled fillcolor="#2196F3" fontcolor=white];
+  5 [label="[5] Database Schema Design\nexp: 2.2d | risk: 2/10\nday 8-10 | slack: 0" style=filled fillcolor="#F44336" fontcolor=white];
+  6 [label="[6] API Design\nexp: 2.0d | risk: 1/10\nday 8-10 | slack: 0" style=filled fillcolor="#F44336" fontcolor=white];
+  7 [label="[7] Auth Service\nexp: 4.2d | risk: 3/10\nday 10-14 | slack: 6" style=filled fillcolor="#2196F3" fontcolor=white];
+  8 [label="[8] Core API Implementation\nexp: 8.5d | risk: 4/10\nday 10-19 | slack: 0" style=filled fillcolor="#F44336" fontcolor=white];
+  9 [label="[9] Database Implementation\nexp: 3.2d | risk: 2/10\nday 10-13 | slack: 7" style=filled fillcolor="#2196F3" fontcolor=white];
+  10 [label="[10] Component Library Setup\nexp: 3.2d | risk: 2/10\nday 10-13 | slack: 1" style=filled fillcolor="#2196F3" fontcolor=white];
+  11 [label="[11] Login and Auth Screens\nexp: 2.2d | risk: 2/10\nday 13-15 | slack: 15" style=filled fillcolor="#2196F3" fontcolor=white];
+  12 [label="[12] Main Dashboard\nexp: 5.3d | risk: 3/10\nday 13-18 | slack: 1" style=filled fillcolor="#2196F3" fontcolor=white];
+  13 [label="[13] Data Views\nexp: 4.2d | risk: 3/10\nday 13-17 | slack: 2" style=filled fillcolor="#2196F3" fontcolor=white];
+  14 [label="[14] CI/CD Pipeline\nexp: 3.2d | risk: 2/10\nday 8-11 | slack: 13" style=filled fillcolor="#2196F3" fontcolor=white];
+  15 [label="[15] Cloud Infrastructure Setup\nexp: 4.2d | risk: 3/10\nday 11-15 | slack: 13" style=filled fillcolor="#2196F3" fontcolor=white];
+  16 [label="[16] API Integration\nexp: 5.3d | risk: 4/10\nday 19-24 | slack: 0" style=filled fillcolor="#F44336" fontcolor=white];
+  17 [label="[17] Unit Tests\nexp: 4.2d | risk: 2/10\nday 19-23 | slack: 1" style=filled fillcolor="#2196F3" fontcolor=white];
+  18 [label="[18] Integration Tests\nexp: 4.2d | risk: 3/10\nday 24-28 | slack: 0" style=filled fillcolor="#F44336" fontcolor=white];
+  19 [label="[19] Performance Testing\nexp: 2.2d | risk: 3/10\nday 28-30 | slack: 0" style=filled fillcolor="#F44336" fontcolor=white];
+  20 [label="[20] Production Deployment\nexp: 2.0d | risk: 4/10\nday 30-32 | slack: 0" style=filled fillcolor="#F44336" fontcolor=white];
+
+  0 -> 1;
+  1 -> 2;
+  2 -> 3;
+  2 -> 4;
+  3 -> 5;
+  3 -> 6;
+  3 -> 14;
+  4 -> 10;
+  4 -> 11;
+  5 -> 7;
+  5 -> 8;
+  5 -> 9;
+  6 -> 7;
+  6 -> 8;
+  7 -> 17;
+  8 -> 16;
+  8 -> 17;
+  9 -> 17;
+  10 -> 11;
+  10 -> 12;
+  10 -> 13;
+  11 -> 20;
+  12 -> 16;
+  13 -> 16;
+  14 -> 15;
+  15 -> 19;
+  16 -> 18;
+  17 -> 18;
+  18 -> 19;
+  19 -> 20;
+  20 -> end;
+
+  m1 [label="M: M1_\nday 10" shape=diamond style=filled fillcolor="#FFC107" fontcolor=black];
+}

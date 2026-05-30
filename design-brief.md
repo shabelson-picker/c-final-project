@@ -1,4 +1,4 @@
-# Project Forge - Design Brief
+# Project Mayhem Management - Design Brief
 **Version 1.0 | May 2026**
 
 ---

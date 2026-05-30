@@ -1,0 +1,28 @@
+digraph datamodel {
+  rankdir=LR;
+  graph [fontname="Helvetica", label="Project Mayhem Management - Data Model", labelloc=t, fontsize=16];
+  node [shape=record, fontname="Helvetica", fontsize=10, style=filled, fillcolor="#f7f9fc"];
+  edge [fontname="Helvetica", fontsize=9, color="#555555"];
+
+  Company [fillcolor="#cfe8ff", label="{Company|name, save_dir\lmembers : TeamMember**\lprojects : Project**\lnext_member_id\l}"];
+  Project [fillcolor="#cfe8ff", label="{Project|name, save_dir, start_date\lstart_node, end_node : Task*\ltasks : Task**\lmilestones : Milestone**\lmember_ids : DynamicIntArray\lnext_task_id, next_milestone_id\l}"];
+  Task [label="{Task|id, title, status\lpert_min/likely/max/exp/var\lrisk, required_skills\lpre/post/alt/work_pre : DynamicIntArray\lassignee_id, manually_assigned\lsched_start/end, latest_start, slack\lis_critical, topo_order\l}"];
+  Milestone [label="{Milestone|id, name\ldeadline_day, priority\ltask_ids : int*, task_count\l}"];
+  TeamMember [label="{TeamMember|id, name, role\lskills (bitmask), availability\lproject_ids : DynamicIntArray (derived)\ltasks : TaskRefArray\l}"];
+  DynamicIntArray [fillcolor="#fff4e6", label="{DynamicIntArray|data : int*\lcount, capacity\l}"];
+  TaskRefArray [fillcolor="#fff4e6", label="{TaskRefArray|data : TaskRef*\lcount, capacity\l}"];
+  TaskRef [fillcolor="#fff4e6", label="{TaskRef|project_id\ltask_id\l}"];
+
+  Company -> TeamMember [arrowhead=diamond, label="owns *"];
+  Company -> Project    [arrowhead=diamond, label="owns *"];
+  Project -> Task       [arrowhead=diamond, label="owns *"];
+  Project -> Milestone  [arrowhead=diamond, label="owns *"];
+  Task -> DynamicIntArray    [arrowhead=diamond, label="4x dep lists"];
+  TeamMember -> TaskRefArray [arrowhead=diamond, label="tasks"];
+  TaskRefArray -> TaskRef    [arrowhead=diamond, label="*"];
+
+  Project -> DynamicIntArray    [style=dashed, label="member_ids"];
+  TeamMember -> DynamicIntArray [style=dashed, label="project_ids"];
+  Project -> TeamMember [style=dashed, color="#999999", label="roster (by id)"];
+  Task -> TeamMember    [style=dashed, color="#999999", label="assignee_id"];
+}

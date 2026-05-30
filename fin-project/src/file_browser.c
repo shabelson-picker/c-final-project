@@ -6,6 +6,7 @@
 #include <windows.h>
 #include "file_browser.h"
 #include "constants.h"
+#include "ui.h"
 
 #define MAX_ENTRIES 256
 
@@ -90,6 +91,7 @@ static int browser_loop(char *out_path, int max_len, BrowserMode mode) {
     }
 
     while (1) {
+        screen_clear();
         _getcwd(cwd, MAX_PATH_LEN);
         count = load_entries(entries, MAX_ENTRIES);
         draw_panel(entries, count, cwd, mode);

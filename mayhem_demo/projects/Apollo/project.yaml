@@ -1,0 +1,37 @@
+meta:
+  name: "Apollo"
+  year: 2026
+  month: 6
+  day: 1
+  member_ids: [1, 2]
+
+tasks:
+  -
+    id: 1
+    title: "Apollo Backend API"
+    description: "Backend - only Alice qualifies"
+    status: 0
+    pert_min: 4.0000
+    pert_likely: 5.0000
+    pert_max: 7.0000
+    risk: 0.2000
+    required_skills: 2
+    assignee_id: -1
+    manually_assigned: 0
+    milestone_id: -1
+  -
+    id: 2
+    title: "Apollo Frontend"
+    description: "Frontend - Bob"
+    status: 0
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 4.0000
+    risk: 0.1000
+    required_skills: 1
+    assignee_id: -1
+    manually_assigned: 0
+    milestone_id: -1
+    pre: [1]
+
+milestones:

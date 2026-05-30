@@ -1,0 +1,52 @@
+digraph gui {
+  rankdir=TB;
+  graph [fontname="Helvetica", label="Project Mayhem Management - GUI Flow", labelloc=t, fontsize=16];
+  node [fontname="Helvetica", fontsize=10];
+  edge [fontname="Helvetica", fontsize=9, color="#555555"];
+
+  main   [shape=oval, label="main()"];
+  m0     [shape=diamond, label="New / Load / Exit"];
+  newc   [shape=box, label="company_new_interactive\n(name + dir_browser)"];
+  loadc  [shape=box, label="company_load_interactive\n(dir_browser)"];
+  exit0  [shape=oval, label="goodbye + quit"];
+
+  menu_company [shape=box, style=filled, fillcolor="#cfe8ff", label="menu_company\nProjects / Team / Save / Exit"];
+  rules  [shape=box, style=filled, fillcolor="#ffe0e0", label="1999 -> Project Mayhem rules\n(hidden)"];
+  projmenu [shape=box, label="menu_company_projects\nNew / Open"];
+  teammenu [shape=box, label="menu_company_team\nAdd / Remove"];
+  create [shape=box, label="create_project"];
+
+  open   [shape=box, style=filled, fillcolor="#cfe8ff", label="open_project\nTasks/Deps/Milestones/Schedule/Members"];
+  tasks  [shape=box, label="menu_tasks\nList/Add/Remove/Edit/Status/Link/Deps/Assign"];
+  deps   [shape=box, label="menu_deps\nlink + view"];
+  mile   [shape=box, label="menu_milestones\nList / Add"];
+  sched  [shape=box, style=filled, fillcolor="#cfe8ff", label="menu_schedule\nGenerate/Report/Gantt/DAG/Export"];
+  roster [shape=box, label="roster checklist\n(run_checklist)"];
+  pin    [shape=box, label="manual_assign\npin member -> task"];
+  gen    [shape=box, style=filled, fillcolor="#d8f5d8", label="scheduler pipeline\n(see scheduler diagram)"];
+  report [shape=box, label="export_report_html\nHTML + inline-SVG DAG"];
+
+  main -> m0;
+  m0 -> newc [label="New"];
+  m0 -> loadc [label="Load"];
+  m0 -> exit0 [label="Exit"];
+  newc -> menu_company;
+  loadc -> menu_company;
+
+  menu_company -> projmenu;
+  menu_company -> teammenu;
+  menu_company -> rules [style=dashed];
+  projmenu -> create [label="New"];
+  projmenu -> open [label="Open"];
+
+  open -> tasks;
+  open -> deps;
+  open -> mile;
+  open -> sched;
+  open -> roster [label="Members"];
+
+  tasks -> pin [label="Assign"];
+  tasks -> deps [label="Deps"];
+  sched -> gen [label="Generate"];
+  sched -> report [label="Export report"];
+}

@@ -13,15 +13,13 @@
 #include "dot_export.h"
 #include "report_exporter.h"
 #include "persistence.h"
+#include "ui.h"
 
 /* GANTT_WIDTH defined in constants.h */
 
-/* ---- input helpers ------------------------------------------------------ */
+/* screen_clear() / screen_pause() / C_* colours / cprintf() live in ui.h */
 
-static void flush_input(void) {
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF) {}
-}
+/* ---- input helpers ------------------------------------------------------ */
 
 static int read_int_impl(const char *prompt, int *out, int show_hint) {
     char buf[64], *end;
@@ -92,17 +90,27 @@ void crumb_pop(void) {
     if (g_crumb_depth > 0) g_crumb_depth--;
 }
 
-void crumb_print(void) {
+/* Draw the title banner + breadcrumb trail. refresh != 0 clears the screen
+ * first (fresh menu); refresh == 0 draws in place (keeps prior output). */
+static void crumb_draw(int refresh) {
     int i;
-    printf("\n  ");
+    if (refresh) screen_clear();
+    for (i = 0; i < 44; i++) putchar('=');
+    printf("\n  " C_BOLD C_CYAN "PROJECT MAYHEM MANAGEMENT" C_RESET "\n  ");
     for (i = 0; i < g_crumb_depth; i++) {
         if (i > 0) printf(" > ");
-        printf("%s", g_crumbs[i]);
+        if (i == g_crumb_depth - 1)
+            printf(C_BOLD C_CYAN "%s" C_RESET, g_crumbs[i]);   /* current */
+        else
+            printf(C_DIM "%s" C_RESET, g_crumbs[i]);           /* ancestors */
     }
-    printf("\n  ");
-    for (i = 0; i < 44; i++) printf("-");
+    printf("\n");
+    for (i = 0; i < 44; i++) putchar('=');
     printf("\n");
 }
+
+void crumb_print(void)   { crumb_draw(0); }  /* header only, no clear */
+void crumb_refresh(void) { crumb_draw(1); }  /* clear + header        */
 
 /* ---- auto-save ---------------------------------------------------------- */
 
@@ -111,33 +119,52 @@ static int      g_company_project_idx = -1; /* index of the open project in g_co
 
 static void autosave(Project *p) {
     if (p->save_dir[0] == '\0') {
-        printf("  [warning] auto-save skipped - no directory set.\n");
+        cprintf(C_YELLOW, "  [warning] auto-save skipped - no directory set.\n");
         return;
     }
     if (g_company) company_save(g_company);
     else if (!project_save(p, p->save_dir))
-        printf("  [warning] auto-save failed for '%s'\n", p->save_dir);
+        cprintf(C_YELLOW, "  [warning] auto-save failed for '%s'\n", p->save_dir);
 }
 
-/* ---- generic menu runner ------------------------------------------------ */
+/* ---- generic menu / checklist runners ----------------------------------- */
 
-void run_menu(Project *p,
-              void (*render)(Project *p),
+/* Generic menu loop over an opaque context. Each iteration: refresh, render,
+ * show options, read a choice. handler returns non-zero to exit the menu.
+ * A pause follows every action (and invalid input) so output is readable. */
+void run_menu(void *ctx,
+              void (*render)(void *ctx),
               const char *options,
-              int  (*handler)(Project *p, int choice)) {
+              int  (*handler)(void *ctx, int choice)) {
     int choice;
     for (;;) {
-        crumb_print();
-        if (render) render(p);
-        printf("%s\n", options);
-        { int _r = read_nav("  > ", &choice); if (_r != 1) continue; }
-        if (handler(p, choice)) break;
+        crumb_refresh();
+        if (render) render(ctx);
+        printf(C_BOLD C_CYAN "%s" C_RESET "\n", options);
+        { int _r = read_nav("  > ", &choice); if (_r != 1) { screen_pause(); continue; } }
+        if (handler(ctx, choice)) break;
+        screen_pause();
+    }
+}
+
+/* Generic checklist loop: refresh + render, read a number, 0 confirms, anything
+ * else is passed to toggle(). No pause - the redrawn checkmarks are the feedback. */
+static void run_checklist(void *ctx,
+                          void (*render)(void *ctx),
+                          void (*toggle)(void *ctx, int n)) {
+    int n;
+    for (;;) {
+        crumb_refresh();
+        render(ctx);
+        { int _r = read_nav("  > ", &n); if (_r != 1) continue; }
+        if (n == 0) break;
+        toggle(ctx, n);
     }
 }
 
 /* ---- task menu ---------------------------------------------------------- */
 
-#define CANCELLED(r) do { if ((r) == -1) { printf("  Cancelled.\n"); return; } } while(0)
+#define CANCELLED(r) do { if ((r) == -1) { cprintf(C_DIM, "  Cancelled.\n"); return; } } while(0)
 
 static void add_task(Project *p) {
     char title[MAX_TITLE_LEN], desc[MAX_DESC_LEN];
@@ -182,20 +209,23 @@ static void add_task(Project *p) {
     }
 
     t = project_add_task(p, title, desc);
-    if (!t) { printf("  Error: could not create task.\n"); return; }
+    if (!t) { cprintf(C_RED, "  Error: could not create task.\n"); return; }
 
     task_set_pert(t, mn, lt, mx);
     task_set_risk(t, risk);
-    printf("  Task [%d] created. Expected duration: %.1f days.\n", t->id, t->pert_expected);
+    cprintf(C_GREEN, "  Task [%d] created. Expected duration: %.1f days.\n", t->id, t->pert_expected);
     autosave(p);
 }
 
 static void list_tasks(Project *p) {
     int i;
-    if (p->task_count == 0) { printf("  No tasks.\n"); return; }
+    if (p->task_count == 0) { cprintf(C_DIM, "  No tasks.\n"); return; }
     printf("\n");
-    for (i = 0; i < p->task_count; i++)
+    for (i = 0; i < p->task_count; i++) {
+        fputs(ui_zebra(i), stdout);
         task_print(p->tasks[i]);
+        fputs(C_RESET, stdout);
+    }
 }
 
 static void link_tasks(Project *p) {
@@ -204,10 +234,10 @@ static void link_tasks(Project *p) {
     CANCELLED(read_int("  Pre-task ID: ",  &pre_id));
     CANCELLED(read_int("  Post-task ID: ", &post_id));
     if (!project_link_tasks(p, pre_id, post_id)) {
-        printf("  Error: task not found.\n");
+        cprintf(C_RED, "  Error: task not found.\n");
         return;
     }
-    printf("  Linked %d --> %d\n", pre_id, post_id);
+    cprintf(C_GREEN, "  Linked %d --> %d\n", pre_id, post_id);
     autosave(p);
     post = project_find_task(p, post_id);
     if (post) render_task_deps(p, post);
@@ -218,10 +248,10 @@ static void remove_task(Project *p) {
     list_tasks(p);
     CANCELLED(read_int("  Task ID to remove: ", &id));
     if (project_remove_task(p, id)) {
-        printf("  Task [%d] removed.\n", id);
+        cprintf(C_GREEN, "  Task [%d] removed.\n", id);
         autosave(p);
     } else {
-        printf("  Task [%d] not found.\n", id);
+        cprintf(C_RED, "  Task [%d] not found.\n", id);
     }
 }
 
@@ -235,17 +265,17 @@ static void change_status(Project *p) {
     list_tasks(p);
     CANCELLED(read_int("  Task ID: ", &id));
     t = project_find_task(p, id);
-    if (!t) { printf("  Task [%d] not found.\n", id); return; }
+    if (!t) { cprintf(C_RED, "  Task [%d] not found.\n", id); return; }
 
     printf("\n  Current status: %s\n", STATUS_LABELS[t->status]);
     for (i = 0; i < 5; i++)
         printf("  [%d] %s\n", i, STATUS_LABELS[i]);
 
     CANCELLED(read_int("  New status: ", &choice));
-    if (choice < 0 || choice > 4) { printf("  Invalid status.\n"); return; }
+    if (choice < 0 || choice > 4) { cprintf(C_RED, "  Invalid status.\n"); return; }
 
     t->status = (TaskStatus)choice;
-    printf("  Task [%d] status -> %s\n", id, STATUS_LABELS[t->status]);
+    cprintf(C_GREEN, "  Task [%d] status -> %s\n", id, STATUS_LABELS[t->status]);
     autosave(p);
 }
 
@@ -256,7 +286,7 @@ static void edit_task(Project *p) {
     list_tasks(p);
     CANCELLED(read_int("  Task ID to edit: ", &id));
     t = project_find_task(p, id);
-    if (!t) { printf("  Task [%d] not found.\n", id); return; }
+    if (!t) { cprintf(C_RED, "  Task [%d] not found.\n", id); return; }
 
     printf("\n  Editing: [%d] %s\n", t->id, t->title);
     printf("  [1] Title\n");
@@ -303,46 +333,80 @@ static void edit_task(Project *p) {
         case 0:
             return;
         default:
-            printf("  Invalid field.\n");
+            cprintf(C_RED, "  Invalid field.\n");
             return;
     }
 
-    printf("  Task [%d] updated.\n", t->id);
+    cprintf(C_GREEN, "  Task [%d] updated.\n", t->id);
     autosave(p);
+}
+
+typedef struct { Project *p; Task *t; } DepsCtx;
+
+static void deps_render(void *ctx) {
+    DepsCtx *d = (DepsCtx *)ctx;
+    render_task_deps(d->p, d->t);
+}
+
+static int deps_handler(void *ctx, int choice) {
+    DepsCtx *d = (DepsCtx *)ctx;
+    switch (choice) {
+        case 0: return 1;
+        case 1: link_tasks(d->p); break;
+        case 2: {
+            int new_id;
+            list_tasks(d->p);
+            if (read_int("  Task ID: ", &new_id) == -1) break;
+            { Task *next = project_find_task(d->p, new_id);
+              if (!next) { cprintf(C_RED, "  Task [%d] not found.\n", new_id); break; }
+              d->t = next; }
+            break;
+        }
+    }
+    return 0;
 }
 
 static void menu_deps(Project *p) {
     int choice;
-    Task *t = NULL;
+    Task *t;
+    DepsCtx d;
 
     crumb_push("Deps");
-
     list_tasks(p);
     { int _r = read_int("  Task ID (0 to back): ", &choice); if (_r == -1 || choice == 0) { crumb_pop(); return; } }
     t = project_find_task(p, choice);
-    if (!t) { printf("  Task [%d] not found.\n", choice); crumb_pop(); return; }
+    if (!t) { cprintf(C_RED, "  Task [%d] not found.\n", choice); crumb_pop(); return; }
 
-    for (;;) {
-        crumb_print();
-        render_task_deps(p, t);
-        printf("  1. Link two tasks    2. View another task's dependencies    0. Back\n");
-        { int _r = read_nav("  > ", &choice); if (_r != 1) continue; }
-        if (choice == 0) break;
-        switch (choice) {
-            case 1: link_tasks(p); break;
-            case 2: {
-                int new_id;
-                list_tasks(p);
-                if (read_int("  Task ID: ", &new_id) == -1) break;
-                { Task *next = project_find_task(p, new_id);
-                  if (!next) { printf("  Task [%d] not found.\n", new_id); break; }
-                  t = next; }
-                break;
-            }
+    d.p = p; d.t = t;
+    run_menu(&d, deps_render,
+             "  1. Link two tasks    2. View another task's dependencies    0. Back",
+             deps_handler);
+    crumb_pop();
+}
+
+/* Print one member's block: the member line + each assigned task on its own
+ * line (derived by scanning every project for assignee_id == member->id), the
+ * whole block in one zebra colour (row = member index), then a separator. */
+static void print_member_block(Company *c, TeamMember *m, int row) {
+    int pi, ti, i;
+
+    fputs(ui_zebra(row), stdout);
+    team_member_print(m);
+    for (pi = 0; pi < c->project_count; pi++) {
+        Project *pr = c->projects[pi];
+        for (ti = 0; ti < pr->task_count; ti++) {
+            Task *t = pr->tasks[ti];
+            if (t->assignee_id == m->id)
+                printf("       - [%d] %s  (%s)\n", t->id, t->title, pr->name);
         }
     }
+    fputs(C_RESET, stdout);
 
-    crumb_pop();
+    fputs(C_DIM, stdout);
+    printf("  ");
+    for (i = 0; i < 60; i++) putchar('-');
+    printf("\n");
+    fputs(C_RESET, stdout);
 }
 
 /* Manually pin a task to a member. Pinned tasks (manually_assigned) are not
@@ -352,33 +416,37 @@ static void manual_assign(Project *p) {
     Task *t;
     TeamMember *m;
 
-    if (!g_company) { printf("  No company context.\n"); return; }
+    if (!g_company) { cprintf(C_RED, "  No company context.\n"); return; }
 
     list_tasks(p);
     CANCELLED(read_int("  Task ID: ", &task_id));
     t = project_find_task(p, task_id);
-    if (!t) { printf("  Task [%d] not found.\n", task_id); return; }
+    if (!t) { cprintf(C_RED, "  Task [%d] not found.\n", task_id); return; }
+
+    crumb_refresh();
+    cprintf(C_BOLD, "  Assign this task:\n  ");
+    task_print(t);
 
     printf("\n  Company members:\n");
     for (mi = 0; mi < g_company->member_count; mi++)
-        team_member_print(g_company->members[mi]);
-    printf("  Enter a member ID to pin, or -1 to clear the assignment.\n");
+        print_member_block(g_company, g_company->members[mi], mi);
+    cprintf(C_DIM, "  Enter a member ID to pin, or -1 to clear the assignment.\n");
 
     CANCELLED(read_int("  Member ID: ", &member_id));
 
     if (member_id == -1) {
         t->assignee_id        = -1;
         t->manually_assigned  = 0;
-        printf("  Task [%d] assignment cleared.\n", task_id);
+        cprintf(C_YELLOW, "  Task [%d] assignment cleared.\n", task_id);
         autosave(p);
         return;
     }
 
     m = company_find_member(g_company, member_id);
-    if (!m) { printf("  Member [%d] not found.\n", member_id); return; }
+    if (!m) { cprintf(C_RED, "  Member [%d] not found.\n", member_id); return; }
 
     if (!team_member_has_skills(m, t->required_skills))
-        printf("  Note: %s is missing some required skills (manual override).\n", m->name);
+        cprintf(C_YELLOW, "  Note: %s is missing some required skills (manual override).\n", m->name);
 
     /* ensure the member is on the project roster so the scheduler sees them */
     if (g_company_project_idx >= 0)
@@ -386,12 +454,13 @@ static void manual_assign(Project *p) {
 
     t->assignee_id       = member_id;
     t->manually_assigned = 1;
-    printf("  Task [%d] pinned to %s; the scheduler will not reassign it.\n",
-           task_id, m->name);
+    cprintf(C_GREEN, "  Task [%d] pinned to %s; the scheduler will not reassign it.\n",
+            task_id, m->name);
     autosave(p);
 }
 
-static int tasks_handler(Project *p, int choice) {
+static int tasks_handler(void *ctx, int choice) {
+    Project *p = (Project *)ctx;
     switch (choice) {
         case 0: return 1;
         case 1: list_tasks(p);    break;
@@ -416,23 +485,22 @@ void menu_tasks(Project *p) {
 
 /* ---- member menu -------------------------------------------------------- */
 
+static void skills_render(void *ctx) {
+    uint32_t mask = *(uint32_t *)ctx;
+    int i;
+    printf("\n  Skills checklist (enter number to toggle, 0 to confirm):\n");
+    for (i = 0; i < SKILL_COUNT; i++)
+        printf("  [%s] %d. %s\n", (mask & (1u << i)) ? "x" : " ", i + 1, SKILL_NAMES[i]);
+}
+
+static void skills_toggle(void *ctx, int n) {
+    uint32_t *mask = (uint32_t *)ctx;
+    if (n >= 1 && n <= SKILL_COUNT) *mask ^= (1u << (n - 1));
+}
+
 static uint32_t select_skills(void) {
     uint32_t mask = 0;
-    int choice, i;
-
-    for (;;) {
-        printf("\n  Skills checklist (enter number to toggle, 0 to confirm):\n");
-        for (i = 0; i < SKILL_COUNT; i++)
-            printf("  [%s] %d. %s\n",
-                   (mask & (1u << i)) ? "x" : " ",
-                   i + 1, SKILL_NAMES[i]);
-
-        { int _r = read_nav("  > ", &choice); if (_r != 1) continue; }
-        if (choice == 0) break;
-        if (choice >= 1 && choice <= SKILL_COUNT)
-            mask ^= (1u << (choice - 1));
-    }
-
+    run_checklist(&mask, skills_render, skills_toggle);
     return mask;
 }
 
@@ -447,18 +515,22 @@ static void add_milestone(Project *p) {
     CANCELLED(read_int("  Priority (1=low, 10=critical): ",      &priority));
 
     Milestone *m = project_add_milestone(p, name, deadline, priority);
-    if (!m) { printf("  Error.\n"); return; }
-    printf("  Milestone [M%d] '%s' created at day %d.\n", m->id, m->name, m->deadline_day);
+    if (!m) { cprintf(C_RED, "  Error.\n"); return; }
+    cprintf(C_GREEN, "  Milestone [M%d] '%s' created at day %d.\n", m->id, m->name, m->deadline_day);
     autosave(p);
 }
 
-static int milestones_handler(Project *p, int choice) {
+static int milestones_handler(void *ctx, int choice) {
+    Project *p = (Project *)ctx;
     int i;
     switch (choice) {
         case 0: return 1;
         case 1:
-            for (i = 0; i < p->milestone_count; i++)
+            for (i = 0; i < p->milestone_count; i++) {
+                fputs(ui_zebra(i), stdout);
                 milestone_print(p->milestones[i]);
+                fputs(C_RESET, stdout);
+            }
             break;
         case 2: add_milestone(p); break;
     }
@@ -475,6 +547,9 @@ void menu_milestones(Project *p) {
 
 static Company *g_sched_company    = NULL;
 static int      g_sched_project_idx = -1;
+
+/* run_menu render hook: keep the Gantt visible above the schedule menu. */
+static void sched_render(void *ctx) { render_gantt((Project *)ctx, g_sched_company, GANTT_WIDTH); }
 
 static int prompt_yes_no(const char *msg) {
     char buf[16];
@@ -508,7 +583,7 @@ static void resolve_unassigned(Company *c, int project_idx, ScheduleStrategy s) 
 
         mid = suggest_company_member(c, p, t);
         if (mid == -1) {
-            printf("  Task [%d] '%s': no company member has the required skills.\n", t->id, t->title);
+            cprintf(C_YELLOW, "  Task [%d] '%s': no company member has the required skills.\n", t->id, t->title);
             continue;
         }
         {
@@ -531,7 +606,8 @@ static void resolve_unassigned(Company *c, int project_idx, ScheduleStrategy s) 
     }
 }
 
-static int schedule_handler(Project *p, int choice) {
+static int schedule_handler(void *ctx, int choice) {
+    Project *p = (Project *)ctx;
     switch (choice) {
         case 0: return 1;
         case 1: {
@@ -577,10 +653,9 @@ void menu_schedule(Company *c, int project_idx) {
     g_sched_company     = c;
     g_sched_project_idx = project_idx;
     crumb_push("Schedule");
-    /* Show the Gantt straight from persisted data on entry (may be empty/stale
-     * until a schedule is generated). */
-    render_gantt(p, c, GANTT_WIDTH);
-    run_menu(p, NULL,
+    /* sched_render keeps the Gantt (from persisted data) above the menu every
+     * iteration, so it's visible on entry without a regenerate. */
+    run_menu(p, sched_render,
              "  1. Generate scheduale    2. Report    3. Gantt    4. DAG    5. Export .dot    6. Export report    0. Back",
              schedule_handler);
     crumb_pop();
@@ -592,11 +667,12 @@ void menu_schedule(Company *c, int project_idx) {
 
 static void list_members(Company *c) {
     int i;
-    if (c->member_count == 0) { printf("  No members.\n"); return; }
+    if (c->member_count == 0) { cprintf(C_DIM, "  No members.\n"); return; }
     printf("\n");
     for (i = 0; i < c->member_count; i++)
-        team_member_print(c->members[i]);
+        print_member_block(c, c->members[i], i);
 }
+
 
 static void add_company_member(Company *c) {
     char name[MAX_NAME_LEN], role[MAX_NAME_LEN];
@@ -604,29 +680,40 @@ static void add_company_member(Company *c) {
     CANCELLED(read_str("  Name: ", name, MAX_NAME_LEN));
     CANCELLED(read_str("  Role: ", role, MAX_NAME_LEN));
     m = company_add_member(c, name, role);
-    if (!m) { printf("  Error: could not create member.\n"); return; }
+    if (!m) { cprintf(C_RED, "  Error: could not create member.\n"); return; }
     m->skills = select_skills();
-    printf("  Member [%d] %s added to company.\n", m->id, m->name);
+    cprintf(C_GREEN, "  Member [%d] %s added to company.\n", m->id, m->name);
     company_save(c);
 }
 
-static void menu_company_team(Company *c) {
-    int choice;
-    crumb_push("Team");
-    for (;;) {
-        crumb_print();
-        list_members(c);
-        printf("  1. Add member    2. Remove member    0. Back\n");
-        { int _r = read_nav("  > ", &choice); if (_r != 1) continue; }
-        if (choice == 0) break;
-        if (choice == 1) add_company_member(c);
-        if (choice == 2) {
+static void team_render(void *ctx) { list_members((Company *)ctx); }
+
+static int team_handler(void *ctx, int choice) {
+    Company *c = (Company *)ctx;
+    switch (choice) {
+        case 0: return 1;
+        case 1: add_company_member(c); break;
+        case 2: {
             int id;
-            if (read_int("  Member ID to remove: ", &id) == -1) continue;
-            if (company_remove_member(c, id)) { printf("  Removed.\n"); company_save(c); }
-            else printf("  Member [%d] not found.\n", id);
+            if (read_int("  Member ID to remove: ", &id) == -1) break;
+            if (company_remove_member(c, id)) {
+                cprintf(C_GREEN, "  Removed.\n");
+                /* easter egg: in death, every member of Project Mayhem has a name */
+                cprintf(C_BOLD C_YELLOW,
+                        "  In death, a member of Project Mayhem has a name. His name is Robert Paulson.\n");
+                company_save(c);
+            } else {
+                cprintf(C_RED, "  Member [%d] not found.\n", id);
+            }
+            break;
         }
     }
+    return 0;
+}
+
+static void menu_company_team(Company *c) {
+    crumb_push("Team");
+    run_menu(c, team_render, "  1. Add member    2. Remove member    0. Back", team_handler);
     crumb_pop();
 }
 
@@ -634,23 +721,71 @@ static void menu_company_team(Company *c) {
 
 static void list_projects(Company *c) {
     int i;
-    if (c->project_count == 0) { printf("  No projects.\n"); return; }
+    if (c->project_count == 0) { cprintf(C_DIM, "  No projects.\n"); return; }
     printf("\n");
     for (i = 0; i < c->project_count; i++)
-        printf("  [%d] %s  (%d tasks, %d members)\n",
-               i, c->projects[i]->name,
-               c->projects[i]->task_count,
-               c->projects[i]->member_ids.count);
+        cprintf(ui_zebra(i), "  [%d] %s  (%d tasks, %d members)\n",
+                i, c->projects[i]->name,
+                c->projects[i]->task_count,
+                c->projects[i]->member_ids.count);
+}
+
+/* Context for the project submenu and its roster checklist. */
+typedef struct { Company *c; int idx; Project *p; } ProjCtx;
+
+static void roster_render(void *ctx) {
+    ProjCtx *pc = (ProjCtx *)ctx;
+    int mi, _k;
+    printf("\n  Project roster (enter ID to toggle, 0 to confirm):\n");
+    for (mi = 0; mi < pc->c->member_count; mi++) {
+        TeamMember *m = pc->c->members[mi];
+        int on_roster = 0;
+        for (_k = 0; _k < pc->p->member_ids.count; _k++)
+            if (pc->p->member_ids.data[_k] == m->id) { on_roster = 1; break; }
+        printf("  [%s] [%2d] %-20s  %s\n", on_roster ? "x" : " ", m->id, m->name, m->role);
+    }
+}
+
+static void roster_toggle(void *ctx, int mid) {
+    ProjCtx *pc = (ProjCtx *)ctx;
+    int _k, found = 0;
+    for (_k = 0; _k < pc->p->member_ids.count; _k++)
+        if (pc->p->member_ids.data[_k] == mid) { found = 1; break; }
+    if (found) {
+        TeamMember *rm = company_find_member(pc->c, mid);
+        dia_sort_remove(&pc->p->member_ids, mid);          /* master */
+        if (rm) dia_sort_remove(&rm->project_ids, pc->idx); /* apprentice */
+        cprintf(C_YELLOW, "  Member [%d] removed from project.\n", mid);
+    } else {
+        if (company_assign_member(pc->c, pc->idx, mid, -1))
+            cprintf(C_GREEN, "  Member [%d] added to project.\n", mid);
+        else
+            cprintf(C_RED, "  Member [%d] not found.\n", mid);
+    }
+}
+
+static int project_handler(void *ctx, int choice) {
+    ProjCtx *pc = (ProjCtx *)ctx;
+    switch (choice) {
+        case 0: return 1;
+        case 1: menu_tasks(pc->p);            break;
+        case 2: menu_deps(pc->p);             break;
+        case 3: menu_milestones(pc->p);       break;
+        case 4: menu_schedule(pc->c, pc->idx); break;
+        case 5: run_checklist(pc, roster_render, roster_toggle); company_save(pc->c); break;
+    }
+    return 0;
 }
 
 static void open_project(Company *c) {
-    int idx, choice;
+    int idx;
     Project *p;
     char crumb_label[MAX_CRUMB_LEN];
+    ProjCtx pc;
 
     list_projects(c);
     if (read_int("  Project index: ", &idx) == -1) return;
-    if (idx < 0 || idx >= c->project_count) { printf("  Invalid index.\n"); return; }
+    if (idx < 0 || idx >= c->project_count) { cprintf(C_RED, "  Invalid index.\n"); return; }
 
     p = c->projects[idx];
     g_company = c;
@@ -658,52 +793,10 @@ static void open_project(Company *c) {
     snprintf(crumb_label, MAX_CRUMB_LEN, "%.28s", p->name);
     crumb_push(crumb_label);
 
-    for (;;) {
-        crumb_print();
-        printf("  1. Tasks    2. Deps    3. Milestones    4. Schedule    5. Members    0. Back\n");
-        { int _r = read_nav("  > ", &choice); if (_r != 1) continue; }
-        if (choice == 0) break;
-        switch (choice) {
-            case 1: menu_tasks(p);           break;
-            case 2: menu_deps(p);            break;
-            case 3: menu_milestones(p);      break;
-            case 4: menu_schedule(c, idx);   break;
-            case 5: {
-                /* toggle project roster - checklist style */
-                int mid, mi;
-                for (;;) {
-                    printf("\n  Project roster (enter ID to toggle, 0 to confirm):\n");
-                    for (mi = 0; mi < c->member_count; mi++) {
-                        TeamMember *m = c->members[mi];
-                        int on_roster = 0, _k;
-                    for (_k = 0; _k < p->member_ids.count; _k++)
-                        if (p->member_ids.data[_k] == m->id) { on_roster = 1; break; }
-                        printf("  [%s] [%2d] %-20s  %s\n",
-                               on_roster ? "x" : " ", m->id, m->name, m->role);
-                    }
-                    { int _r = read_nav("  > ", &mid); if (_r != 1) continue; }
-                    if (mid == 0) break;
-                    { int _k, _found = 0;
-                      for (_k = 0; _k < p->member_ids.count; _k++)
-                          if (p->member_ids.data[_k] == mid) { _found = 1; break; }
-                      if (_found) {
-                          TeamMember *rm = company_find_member(c, mid);
-                          dia_sort_remove(&p->member_ids, mid);       /* master */
-                          if (rm) dia_sort_remove(&rm->project_ids, idx); /* apprentice */
-                          printf("  Member [%d] removed from project.\n", mid);
-                      } else {
-                          if (company_assign_member(c, idx, mid, -1))
-                              printf("  Member [%d] added to project.\n", mid);
-                          else
-                              printf("  Member [%d] not found.\n", mid);
-                      }
-                    }
-                }
-                company_save(c);
-                break;
-            }
-        }
-    }
+    pc.c = c; pc.idx = idx; pc.p = p;
+    run_menu(&pc, NULL,
+             "  1. Tasks    2. Deps    3. Milestones    4. Schedule    5. Members    0. Back",
+             project_handler);
 
     crumb_pop();
     g_company = NULL;
@@ -720,46 +813,59 @@ static void create_project(Company *c) {
 
     CANCELLED(read_str("  Project name: ", name, MAX_NAME_LEN));
     p = company_add_project(c, name, today);
-    if (!p) { printf("  Error: could not create project.\n"); return; }
+    if (!p) { cprintf(C_RED, "  Error: could not create project.\n"); return; }
 
     snprintf(proj_dir, MAX_PATH_LEN, "%s\\projects\\%s", c->save_dir, name);
     strncpy(p->save_dir, proj_dir, sizeof(p->save_dir) - 1);
 
     company_save(c);
-    printf("  Project '%s' created.\n", name);
+    cprintf(C_GREEN, "  Project '%s' created.\n", name);
+}
+
+static void projects_render(void *ctx) { list_projects((Company *)ctx); }
+
+static int projects_handler(void *ctx, int choice) {
+    Company *c = (Company *)ctx;
+    switch (choice) {
+        case 0: return 1;
+        case 1: create_project(c); break;
+        case 2: open_project(c);   break;
+    }
+    return 0;
 }
 
 static void menu_company_projects(Company *c) {
-    int choice;
     crumb_push("Projects");
-    for (;;) {
-        crumb_print();
-        list_projects(c);
-        printf("  1. New project    2. Open project    0. Back\n");
-        { int _r = read_nav("  > ", &choice); if (_r != 1) continue; }
-        if (choice == 0) break;
-        if (choice == 1) create_project(c);
-        if (choice == 2) open_project(c);
-    }
+    run_menu(c, projects_render, "  1. New project    2. Open project    0. Back", projects_handler);
     crumb_pop();
 }
 
 /* ---- company top-level menu --------------------------------------------- */
 
-void menu_company(Company *c) {
-    int choice;
-    crumb_push(c->name);
-    for (;;) {
-        crumb_print();
-        company_print_summary(c);
-        printf("  1. Projects    2. Team    3. Save    0. Exit\n");
-        { int _r = read_nav("  > ", &choice); if (_r != 1) continue; }
-        if (choice == 0) break;
-        switch (choice) {
-            case 1: menu_company_projects(c); break;
-            case 2: menu_company_team(c);     break;
-            case 3: company_save(c); printf("  Saved to %s\n", c->save_dir); break;
-        }
+static void company_render(void *ctx) { company_print_summary((Company *)ctx); }
+
+/* The rules. */
+static void project_mayhem_rules(void) {
+    cprintf(C_BOLD C_RED, "\n  Welcome to Project Mayhem.\n");
+    cprintf(C_RED, "  1st rule: You do not talk about Project Mayhem.\n");
+    cprintf(C_RED, "  2nd rule: You DO NOT talk about Project Mayhem.\n");
+    cprintf(C_DIM, "  ... 8th rule: If this is your first night, you have to assign a task.\n");
+}
+
+static int company_handler(void *ctx, int choice) {
+    Company *c = (Company *)ctx;
+    switch (choice) {
+        case 0: return 1;
+        case 1: menu_company_projects(c); break;
+        case 2: menu_company_team(c);     break;
+        case 3: company_save(c); cprintf(C_GREEN, "  Saved to %s\n", c->save_dir); break;
+        case 1999: project_mayhem_rules(); break;  /* easter egg (undocumented) */
     }
+    return 0;
+}
+
+void menu_company(Company *c) {
+    crumb_push(c->name);
+    run_menu(c, company_render, "  1. Projects    2. Team    3. Save    0. Exit", company_handler);
     crumb_pop();
 }

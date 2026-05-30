@@ -39,26 +39,82 @@ typedef struct {
     int        topo_order;      /* 1-based topological position (0 = unscheduled) */
 } Task;
 
-/* Lifecycle */
+/* ---- Lifecycle ---------------------------------------------------------- */
+
+/// <summary>Allocate a task with empty dependency arrays and sentinel schedule fields.</summary>
+/// <param name="id">Task ID (unique within its project).</param>
+/// <param name="title">Title (copied).</param>
+/// <param name="description">Description (copied).</param>
+/// <returns>New task, or NULL on allocation failure.</returns>
 Task *task_create(int id, const char *title, const char *description);
+
+/// <summary>Free a task and its owned dependency arrays.</summary>
+/// <param name="t">Task to free (NULL-safe).</param>
 void  task_destroy(Task *t);
 
-/* Configuration */
+/* ---- Configuration ------------------------------------------------------ */
+
+/// <summary>Set PERT estimates and recompute pert_expected = (min+4*likely+max)/6 and variance.</summary>
+/// <param name="t">Task.</param>
+/// <param name="min">Optimistic days.</param>
+/// <param name="likely">Most-likely days.</param>
+/// <param name="max">Pessimistic days.</param>
 void  task_set_pert(Task *t, float min, float likely, float max);
+
+/// <summary>Set the risk weight, clamped to [0.0, 1.0].</summary>
+/// <param name="t">Task.</param>
+/// <param name="risk">Risk weight (0 = none, 1 = critical).</param>
 void  task_set_risk(Task *t, float risk);
+
+/// <summary>Set the required-skills bitmask.</summary>
+/// <param name="t">Task.</param>
+/// <param name="skills">Bitmask of Skill values.</param>
 void  task_set_skills(Task *t, uint32_t skills);
 
-/* Dependency management */
+/* ---- Dependency management ---------------------------------------------- */
+
+/// <summary>Add a logical predecessor ID to this task's pre list.</summary>
+/// <param name="t">Task.</param>
+/// <param name="pre_id">Predecessor task ID.</param>
+/// <returns>1 on success, 0 on allocation failure.</returns>
 int   task_add_pre(Task *t, int pre_id);
+
+/// <summary>Add a logical successor ID to this task's post list.</summary>
+/// <param name="t">Task.</param>
+/// <param name="post_id">Successor task ID.</param>
+/// <returns>1 on success, 0 on allocation failure.</returns>
 int   task_add_post(Task *t, int post_id);
+
+/// <summary>Add a plan-B alternative task ID.</summary>
+/// <param name="t">Task.</param>
+/// <param name="alt_id">Alternative task ID.</param>
+/// <returns>1 on success, 0 on allocation failure.</returns>
 int   task_add_alt(Task *t, int alt_id);
+
+/// <summary>Remove a predecessor ID from the pre list.</summary>
+/// <param name="t">Task.</param>
+/// <param name="pre_id">Predecessor task ID.</param>
+/// <returns>1 if removed, 0 if not present.</returns>
 int   task_remove_pre(Task *t, int pre_id);
+
+/// <summary>Remove a successor ID from the post list.</summary>
+/// <param name="t">Task.</param>
+/// <param name="post_id">Successor task ID.</param>
+/// <returns>1 if removed, 0 if not present.</returns>
 int   task_remove_post(Task *t, int post_id);
 
-/* Queries */
+/* ---- Queries ------------------------------------------------------------ */
+
+/// <summary>Test whether a member's skills cover this task's required skills.</summary>
+/// <param name="t">Task.</param>
+/// <param name="member_skills">Candidate member's skill bitmask.</param>
+/// <returns>1 if all required skills are present, 0 otherwise.</returns>
 int   task_can_be_done_by(const Task *t, uint32_t member_skills);
 
-/* Display */
+/* ---- Display ------------------------------------------------------------ */
+
+/// <summary>Print a one-line task summary (status, PERT, risk, skills, flags, schedule) to stdout.</summary>
+/// <param name="t">Task to print.</param>
 void  task_print(const Task *t);
 
 #endif /* TASK_H */

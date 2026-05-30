@@ -3,6 +3,7 @@
 #include <string.h>
 #include "algorithms.h"
 #include "team.h"
+#include "ui.h"
 
 #define MAX_ASSIGN_PASSES 8
 
@@ -179,16 +180,16 @@ int schedule_project(Project *p, ScheduleStrategy strategy) {
 
 void schedule_print_report(const Project *p) {
     int i;
-    printf("\n=== Schedule Report ===\n");
-    printf("%-4s  %-30s  %5s  %5s  %5s  %8s\n",
-           "ID", "Title", "Start", "End", "Slack", "Status");
+    cprintf(C_BOLD, "\n=== Schedule Report ===\n");
+    cprintf(C_BOLD, "%-4s  %-30s  %5s  %5s  %5s  %8s\n",
+            "ID", "Title", "Start", "End", "Slack", "Status");
     printf("---------------------------------------------------------------\n");
     for (i = 0; i < p->task_count; i++) {
         Task *t = p->tasks[i];
-        printf("%-4d  %-30s  %5d  %5d  %5d  %s\n",
-               t->id, t->title,
-               t->sched_start, t->sched_end, t->slack,
-               t->is_critical ? "[CRITICAL]" : "");
+        cprintf(ui_zebra(i), "%-4d  %-30s  %5d  %5d  %5d  %s\n",
+                t->id, t->title,
+                t->sched_start, t->sched_end, t->slack,
+                t->is_critical ? "[CRITICAL]" : "");
     }
 }
 
