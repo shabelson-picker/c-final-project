@@ -104,6 +104,8 @@ void task_print(const Task *t) {
         printf("]");
     }
 
+    if (t->assignee_id == -1) printf("  [UNASSIGNED]");
+    if (t->manually_assigned) printf("  [MANUAL]");
     if (t->is_critical) printf("  [CRITICAL]");
     if (t->sched_start >= 0)
         printf("  sched: day %d-%d", t->sched_start, t->sched_end);

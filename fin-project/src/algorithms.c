@@ -201,7 +201,8 @@ static void clear_work_assignments(Project *p) {
     for (i = 0; i < p->task_count; i++) {
         dia_free(&p->tasks[i]->work_pre_ids);
         dia_init(&p->tasks[i]->work_pre_ids);
-        p->tasks[i]->assignee_id = -1;
+        if (!p->tasks[i]->manually_assigned)   /* keep pinned assignments */
+            p->tasks[i]->assignee_id = -1;
     }
 }
 

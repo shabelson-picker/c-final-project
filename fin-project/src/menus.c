@@ -106,7 +106,8 @@ void crumb_print(void) {
 
 /* ---- auto-save ---------------------------------------------------------- */
 
-static Company *g_company = NULL;  /* set when entering a project context */
+static Company *g_company = NULL;          /* set when entering a project context */
+static int      g_company_project_idx = -1; /* index of the open project in g_company */
 
 static void autosave(Project *p) {
     if (p->save_dir[0] == '\0') {
@@ -344,6 +345,52 @@ static void menu_deps(Project *p) {
     crumb_pop();
 }
 
+/* Manually pin a task to a member. Pinned tasks (manually_assigned) are not
+ * reassigned by the scheduler. Member ID -1 clears the pin. */
+static void manual_assign(Project *p) {
+    int task_id, member_id, mi;
+    Task *t;
+    TeamMember *m;
+
+    if (!g_company) { printf("  No company context.\n"); return; }
+
+    list_tasks(p);
+    CANCELLED(read_int("  Task ID: ", &task_id));
+    t = project_find_task(p, task_id);
+    if (!t) { printf("  Task [%d] not found.\n", task_id); return; }
+
+    printf("\n  Company members:\n");
+    for (mi = 0; mi < g_company->member_count; mi++)
+        team_member_print(g_company->members[mi]);
+    printf("  Enter a member ID to pin, or -1 to clear the assignment.\n");
+
+    CANCELLED(read_int("  Member ID: ", &member_id));
+
+    if (member_id == -1) {
+        t->assignee_id        = -1;
+        t->manually_assigned  = 0;
+        printf("  Task [%d] assignment cleared.\n", task_id);
+        autosave(p);
+        return;
+    }
+
+    m = company_find_member(g_company, member_id);
+    if (!m) { printf("  Member [%d] not found.\n", member_id); return; }
+
+    if (!team_member_has_skills(m, t->required_skills))
+        printf("  Note: %s is missing some required skills (manual override).\n", m->name);
+
+    /* ensure the member is on the project roster so the scheduler sees them */
+    if (g_company_project_idx >= 0)
+        company_assign_member(g_company, g_company_project_idx, member_id, -1);
+
+    t->assignee_id       = member_id;
+    t->manually_assigned = 1;
+    printf("  Task [%d] pinned to %s; the scheduler will not reassign it.\n",
+           task_id, m->name);
+    autosave(p);
+}
+
 static int tasks_handler(Project *p, int choice) {
     switch (choice) {
         case 0: return 1;
@@ -354,6 +401,7 @@ static int tasks_handler(Project *p, int choice) {
         case 5: change_status(p); break;
         case 6: link_tasks(p);    break;
         case 7: menu_deps(p);     break;
+        case 8: manual_assign(p); break;
     }
     return 0;
 }
@@ -361,7 +409,7 @@ static int tasks_handler(Project *p, int choice) {
 void menu_tasks(Project *p) {
     crumb_push("Tasks");
     run_menu(p, NULL,
-             "  1. List    2. Add    3. Remove    4. Edit    5. Status    6. Link    7. Deps    0. Back",
+             "  1. List    2. Add    3. Remove    4. Edit    5. Status    6. Link    7. Deps    8. Assign    0. Back",
              tasks_handler);
     crumb_pop();
 }
@@ -606,6 +654,7 @@ static void open_project(Company *c) {
 
     p = c->projects[idx];
     g_company = c;
+    g_company_project_idx = idx;
     snprintf(crumb_label, MAX_CRUMB_LEN, "%.28s", p->name);
     crumb_push(crumb_label);
 
@@ -658,6 +707,7 @@ static void open_project(Company *c) {
 
     crumb_pop();
     g_company = NULL;
+    g_company_project_idx = -1;
 }
 
 static void create_project(Company *c) {

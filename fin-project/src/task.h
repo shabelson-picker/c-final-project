@@ -26,8 +26,9 @@ typedef struct {
     DynamicIntArray alt_ids;      /* plan-B alternatives if cancelled         */
     DynamicIntArray work_pre_ids; /* resource constraints - must not enter DAG */
 
-    int        assignee_id;     /* -1 = unassigned                     */
-    int        milestone_id;    /* -1 = none                           */
+    int        assignee_id;       /* -1 = unassigned                     */
+    int        manually_assigned; /* 1 = pinned; scheduler won't reassign */
+    int        milestone_id;     /* -1 = none                           */
 
     /* Set by scheduler */
     int        sched_start;     /* earliest start day from project day 0 */
