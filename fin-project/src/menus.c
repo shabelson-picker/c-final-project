@@ -898,6 +898,7 @@ static int company_handler(void *ctx, int choice) {
         case 1: menu_company_projects(c); break;
         case 2: menu_company_team(c);     break;
         case 3: company_save(c); cprintf(C_GREEN, "  Saved to %s\n", c->save_dir); break;
+        case 4: render_portfolio_gantt(c, GANTT_WIDTH); break;
         case 1999: project_mayhem_rules(); break;  /* easter egg (undocumented) */
     }
     return 0;
@@ -905,6 +906,6 @@ static int company_handler(void *ctx, int choice) {
 
 void menu_company(Company *c) {
     crumb_push(c->name);
-    run_menu(c, company_render, "  1. Projects    2. Team    3. Save    0. Exit", company_handler);
+    run_menu(c, company_render, "  1. Projects    2. Team    3. Save    4. Portfolio    0. Exit", company_handler);
     crumb_pop();
 }

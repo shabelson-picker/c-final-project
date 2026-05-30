@@ -20,6 +20,14 @@ void render_gantt(const Project *p, const Company *c, int width);
 void render_gantt_html(FILE *out, const Project *p, const Company *c, int width);
 
 /*
+ * Portfolio Gantt - one bar per project on a shared absolute-date timeline.
+ * Each project's span is [start_date, start_date + makespan] where makespan is
+ * the max task sched_end. Projects with an invalid/missing start_date are listed
+ * as "(no start date)" with no bar.
+ */
+void render_portfolio_gantt(const Company *c, int width);
+
+/*
  * DAG view - ASCII dependency graph.
  * Nodes are task IDs/titles; edges show pre->post relationships.
  */

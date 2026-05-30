@@ -208,6 +208,92 @@ void render_gantt_html(FILE *out, const Project *p, const Company *c, int width)
     free(rows);
 }
 
+/* ---- Portfolio Gantt chart ----------------------------------------------- */
+
+void render_portfolio_gantt(const Company *c, int width) {
+    int i, j;
+    long t0 = 0, t1 = 0;
+    long span;
+    int datable_count = 0;
+    int span_days = 0;
+
+    if (c->project_count == 0) {
+        printf("%sNo projects.%s\n", ANSI_DIM, ANSI_RESET);
+        return;
+    }
+
+    /* Pass 1: compute makespan per project and absolute timeline bounds */
+    for (i = 0; i < c->project_count; i++) {
+        Project *p = c->projects[i];
+        int makespan = 0;
+        int k;
+        for (k = 0; k < p->task_count; k++)
+            if (p->tasks[k]->sched_end > makespan)
+                makespan = p->tasks[k]->sched_end;
+
+        if (date_is_valid(p->start_date)) {
+            long sa = date_to_days(p->start_date);
+            long ea = sa + makespan;
+            if (datable_count == 0) {
+                t0 = sa;
+                t1 = ea;
+            } else {
+                if (sa < t0) t0 = sa;
+                if (ea > t1) t1 = ea;
+            }
+            datable_count++;
+        }
+    }
+
+    span = (datable_count > 0) ? (t1 - t0) : 0;
+    span_days = (int)span;
+    if (span <= 0) span = 1; /* avoid divide-by-zero */
+
+    /* Header */
+    printf("\n%s=== Portfolio Gantt (%d projects, %d days span) ===%s\n",
+           ANSI_BOLD, c->project_count, span_days, ANSI_RESET);
+
+    /* Ruler */
+    printf("%-24s  %5s  |", "Project", "Days");
+    for (j = 0; j < width; j++) printf(j % 10 == 0 ? "|" : "-");
+    printf("\n");
+
+    /* One row per project */
+    for (i = 0; i < c->project_count; i++) {
+        Project *p = c->projects[i];
+        int makespan = 0;
+        int k;
+        for (k = 0; k < p->task_count; k++)
+            if (p->tasks[k]->sched_end > makespan)
+                makespan = p->tasks[k]->sched_end;
+
+        printf("%-24.24s  %5dd  |", p->name, makespan);
+
+        if (!date_is_valid(p->start_date)) {
+            printf("%s(no start date)%s", ANSI_DIM, ANSI_RESET);
+        } else {
+            long sa = date_to_days(p->start_date);
+            long ea = sa + makespan;
+            int col_start = (int)((sa - t0) * width / span);
+            int col_end   = (int)((ea - t0) * width / span);
+            if (col_start < 0)       col_start = 0;
+            if (col_start > width-1) col_start = width - 1;
+            if (col_end   < 0)       col_end   = 0;
+            if (col_end   > width-1) col_end   = width - 1;
+            if (col_end < col_start) col_end   = col_start;
+
+            for (j = 0; j < width; j++) {
+                if (j >= col_start && j <= col_end)
+                    printf("%s#%s", ANSI_CYAN, ANSI_RESET);
+                else
+                    printf(" ");
+            }
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
 /* ---- Task dependency chart ---------------------------------------------- */
 
 #define PRE_COL  26
