@@ -383,6 +383,7 @@ static int project_find_cyclic_paths(const Project* p, int pre_id, int post_id, 
 		dia_sort_insert(visited, post_id);
 	}
 	Task* t = project_find_task(p, post_id);
+	if (!t) return 0;   /* edge to an unknown task (e.g. forward ref mid-load) - no cycle */
 	for (int i = 0;i < t->post_ids.count;i++)
 	{
 		int res = project_find_cyclic_paths(p, pre_id, t->post_ids.data[i], visited, path);
