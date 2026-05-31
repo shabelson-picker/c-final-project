@@ -203,3 +203,61 @@ flowchart TD
     E --> F[resolve_unassigned<br/>cascade: suggest off-roster member]
     F --> G[company_save]
 ```
+
+---
+
+## 4. Future-state architecture (PLANNED - not yet built)
+
+The next architectural arc: a **company-scale unified scheduler** (all projects as one,
+exact interval-aware resource awareness), **subcontractors** (temp exclusive workers), and
+a **Subtask preemption layer** (auto-split around vacations / free gaps). Green/dashed =
+new; blue = existing logic reused at the new (portfolio) scope. See
+`ARCHITECTURE_AND_ALGORITHMS.md` §12.
+
+```mermaid
+flowchart TD
+    CO[Company<br/>ALL projects + shared member pool]:::exist --> U1
+
+    subgraph MODEL [Unified model build - NEW]
+        U1[combine ALL projects into one task set<br/>on an ABSOLUTE timeline]:::new
+        U2[global resource set<br/>members = one shared pool]:::new
+        U3[cross-project work_pre edges<br/>keyed by TaskRef project_id, task_id]:::new
+        U1 --> U2 --> U3
+    end
+
+    subgraph SCHED [Company-scale scheduler - CPM reused at portfolio scope]
+        G1[global topo_sort<br/>within-project DAGs = components]:::exist
+        G2[forward/backward pass on absolute timeline<br/>min_start hack removed]:::exist
+        G3[global assignment<br/>find_best_member over GLOBAL load]:::exist
+        G4[resolve_resource_overlaps COMPANY-WIDE<br/>interval-aware EXACT - subsumes coarse floor]:::new
+        G1 --> G2 --> G3 --> G4
+    end
+    U3 --> G1
+
+    subgraph STAFF [Staffing options]
+        St1[on-roster member]:::exist
+        St2[hire from company<br/>off-roster joins pool]:::exist
+        St3[SUBCONTRACTOR - NEW<br/>temp, external, exclusive to one task]:::new
+    end
+    St1 -.feeds.-> G3
+    St2 -.-> G3
+    St3 -.-> G3
+
+    subgraph PRE [Preemption layer - NEW, Subtask segments]
+        P1[detect task straddling vacation / free-gap<br/>gap = time-shared assignee]:::new
+        P2[split into schedule-time SEGMENTS]:::new
+        P3[schedule flattened LEAVES]:::new
+        P4[merge adjacent contiguous segments]:::new
+        P1 --> P2 --> P3 --> P4
+    end
+    G2 -.during pass.-> P1
+    P4 -.-> G4
+
+    G4 --> O1[Company / Portfolio Gantt - PRIMARY]:::out
+    G4 --> O2[per-project Gantt - derived]:::out
+    G4 --> O3[cost / budget rollup - NEW<br/>driven by subcontractors]:::new
+
+    classDef new fill:#e6ffe6,stroke:#3a8a3a,stroke-dasharray:5 3;
+    classDef exist fill:#eef4ff,stroke:#5577aa;
+    classDef out fill:#d8f5d8,stroke:#3a8a3a;
+```
