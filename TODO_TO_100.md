@@ -102,6 +102,14 @@ summaries + diagrams already in the repo:
   commitments (external -> floor 0). Entry points: a third choice in the
   `resolve_unassigned` cascade and a sim "hire subcontractor" event. Natural hook for a
   future **cost/budget** field (external hire = $$). (Design notes in `.memory`.)
+- [ ] **Company-scale scheduler strategy** - a mode that plans *all projects as one
+  unified project*: every task on a shared absolute timeline, the member pool as one
+  global resource set, CPM + assignment + overlap-resolution over the union. Subsumes the
+  current coarse cross-project floor with an *exact, interval-aware* calendar (the single
+  highest-value scheduling upgrade). Cross-project resource edges keyed by
+  `TaskRef(project_id, task_id)`; `find_best_member` sees global load; add a company-menu
+  "Schedule all". Big refactor (scheduler moves from `Project*` to company-aware). Design
+  notes in `.memory`.
 - [ ] Convert demo data churn out of git; keep the ZIP lean.
 - [ ] A one-page **user guide** (key bindings / menu map) for the presentation appendix.
 
