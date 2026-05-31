@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apollo - Project Report</title>
+<style>
+:root{--bg:#0f172a;--panel:#ffffff;--ink:#1e293b;--muted:#64748b;--line:#e2e8f0;--accent:#6366f1;--accent2:#8b5cf6;--ok:#16a34a;--warn:#dc2626;--amber:#d97706}
+*{box-sizing:border-box}
+body{font-family:'Segoe UI',-apple-system,Roboto,Helvetica,Arial,sans-serif;margin:0;background:#f1f5f9;color:var(--ink);line-height:1.5}
+.wrap{max-width:1100px;margin:0 auto;padding:32px 20px 64px}
+.hero{background:linear-gradient(120deg,var(--accent),var(--accent2));color:#fff;border-radius:16px;padding:28px 32px;box-shadow:0 10px 30px rgba(99,102,241,.25)}
+.hero h1{margin:0;font-size:28px;letter-spacing:.3px}
+.hero .meta{margin:6px 0 0;color:rgba(255,255,255,.85);font-size:13px}
+h2{font-size:18px;margin:34px 0 12px;padding-bottom:6px;border-bottom:2px solid var(--line)}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:6px 18px 18px;box-shadow:0 1px 3px rgba(15,23,42,.06);margin-bottom:18px}
+.kpis{display:flex;flex-wrap:wrap;gap:14px;margin:18px 0}
+.kpi{flex:1;min-width:150px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:0 1px 3px rgba(15,23,42,.06)}
+.kpi .n{font-size:26px;font-weight:700;color:var(--accent)}
+.kpi .l{font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.6px}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{padding:9px 12px;text-align:left;border-bottom:1px solid var(--line)}
+th{color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:.5px}
+tbody tr:hover{background:#f8fafc} td.crit{color:var(--warn);font-weight:600}
+.pill{display:inline-block;padding:2px 10px;border-radius:999px;font-size:11px;font-weight:600}
+.pill.ok{background:#dcfce7;color:var(--ok)} .pill.over{background:#fee2e2;color:var(--warn)}
+.pill.idle{background:#f1f5f9;color:var(--muted)}
+.bar{height:8px;border-radius:999px;background:var(--line);overflow:hidden;min-width:90px}
+.bar>span{display:block;height:100%;background:linear-gradient(90deg,var(--ok),#22c55e)}
+pre.gantt{font-family:Consolas,'Courier New',monospace;font-size:12px;line-height:1.4;background:#0f172a;color:#e2e8f0;border-radius:12px;padding:14px;overflow-x:auto}
+pre.gantt .opt{font-weight:bold;color:#fff} pre.gantt .exp{color:#94a3b8} pre.gantt .pess{color:var(--amber)}
+pre.gantt .crit{color:#f87171} pre.gantt .noncrit{color:#4ade80}
+.legend{color:var(--muted);font-size:12px} .warn{color:var(--warn);font-weight:600}
+svg{max-width:100%;height:auto}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="hero"><h1>Apollo</h1>
+<p class="meta">Start 2026-06-01 &middot; Generated 2026-05-31 &middot; Duration 24 days &middot; 3 tasks &middot; 2 on roster</p></div>
+<h2>Tasks</h2>
+<table>
+<tr><th>ID</th><th>Title</th><th>Status</th><th>Assignee</th><th>PERT o/l/p</th><th>Exp</th><th>Risk</th><th>Start</th><th>End</th><th>Slack</th><th>Critical</th></tr>
+<tr><td>1</td><td>Apollo Backend API (part 1)</td><td>TODO</td><td>Carol Wu</td><td>2.8 / 3.5 / 4.9</td><td>3.6</td><td>2/10</td><td>15</td><td>19</td><td>0</td><td class="crit">yes</td></tr>
+<tr><td>2</td><td>Apollo Design Polish</td><td>TODO</td><td>David Kim</td><td>2.0 / 3.0 / 4.0</td><td>3.0</td><td>1/10</td><td>21</td><td>24</td><td>0</td><td class="crit">yes</td></tr>
+<tr><td>3</td><td>Apollo Backend API (part 2)</td><td>TODO</td><td>Carol Wu</td><td>1.2 / 1.5 / 2.1</td><td>1.6</td><td>2/10</td><td>19</td><td>21</td><td>0</td><td class="crit">yes</td></tr>
+</table>
+<h2>Gantt (duration: 24 days)</h2>
+<p class="legend"># optimistic &middot; ~ expected &middot; - pessimistic overrun</p>
+<pre class="gantt">Apollo Backend API (pa  [CRITICAL]      Carol Wu            1    |                                     <span class="opt crit">########</span><span class="exp crit">~~</span><span class="pess crit">----</span>         
+Apollo Backend API (pa  [CRITICAL]      Carol Wu            2    |                                               <span class="opt crit">###</span><span class="exp crit">~~</span><span class="pess crit">-</span>       
+Apollo Design Polish    [CRITICAL]      David Kim           3    |                                                    <span class="opt crit">#####</span><span class="exp crit">~~</span><span class="pess crit">-</span>
+</pre>
+<h2>Dependency Graph</h2>
+<svg width="908pt" height="70pt"
+ viewBox="0.00 0.00 908.00 70.00" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<g id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 66.23)">
+<title>Apollo</title>
+<polygon fill="white" stroke="none" points="-4,4 -4,-66.23 903.69,-66.23 903.69,4 -4,4"/>
+<!-- 0 -->
+<g id="node1" class="node">
+<title>0</title>
+<ellipse fill="#4caf50" stroke="black" cx="30.82" cy="-31.11" rx="30.82" ry="30.82"/>
+<text xml:space="preserve" text-anchor="middle" x="30.82" y="-26.66" font-family="Helvetica,sans-Serif" font-size="11.00" fill="white">START</text>
+</g>
+<!-- 1 -->
+<g id="node3" class="node">
+<title>1</title>
+<ellipse fill="#f44336" stroke="black" cx="213.43" cy="-31.11" rx="115.79" ry="31.11"/>
+<text xml:space="preserve" text-anchor="middle" x="213.43" y="-38.66" font-family="Helvetica,sans-Serif" font-size="11.00" fill="white">[1] Apollo Backend API (part 1)</text>
+<text xml:space="preserve" text-anchor="middle" x="213.43" y="-26.66" font-family="Helvetica,sans-Serif" font-size="11.00" fill="white">exp: 3.6d | risk: 2/10</text>
+<text xml:space="preserve" text-anchor="middle" x="213.43" y="-14.66" font-family="Helvetica,sans-Serif" font-size="11.00" fill="white">day 15&#45;19 | slack: 0</text>
+</g>
+<!-- 0&#45;&gt;1 -->
+<g id="edge1" class="edge">
+<title>0&#45;&gt;1</title>
+<path fill="none" stroke="#555555" d="M62.05,-31.11C69.25,-31.11 77.38,-31.11 86.05,-31.11"/>
+<polygon fill="#555555" stroke="#555555" points="85.77,-34.61 95.77,-31.11 85.77,-27.61 85.77,-34.61"/>
+</g>
+<!-- end -->
+<g id="node2" class="node">
+<title>end</title>
+<ellipse fill="#607d8b" stroke="black" cx="875.63" cy="-31.11" rx="24.05" ry="24.05"/>
+<text xml:space="preserve" text-anchor="middle" x="875.63" y="-26.66" font-family="Helvetica,sans-Serif" font-size="11.00" fill="white">END</text>
+</g>
+<!-- 3 -->
+<g id="node5" class="node">
+<title>3</title>
+<ellipse fill="#f44336" stroke="black" cx="481" cy="-31.11" rx="115.79" ry="31.11"/>
+<text xml:space="preserve" text-anchor="middle" x="481" y="-38.66" font-family="Helvetica,sans-Serif" font-size="11.00" fill="white">[3] Apollo Backend API (part 2)</text>
+<text xml:space="preserve" text-anchor="middle" x="481" y="-26.66" font-family="Helvetica,sans-Serif" font-size="11.00" fill="white">exp: 1.6d | risk: 2/10</text>
+<text xml:space="preserve" text-anchor="middle" x="481" y="-14.66" font-family="Helvetica,sans-Serif" font-size="11.00" fill="white">day 19&#45;21 | slack: 0</text>
+</g>
+<!-- 1&#45;&gt;3 -->
+<g id="edge2" class="edge">
+<title>1&#45;&gt;3</title>
+<path fill="none" stroke="#555555" d="M329.37,-31.11C337.37,-31.11 345.46,-31.11 353.52,-31.11"/>
+<polygon fill="#555555" stroke="#555555" points="353.37,-34.61 363.37,-31.11 353.37,-27.61 353.37,-34.61"/>
+</g>
+<!-- 2 -->
+<g id="node4" class="node">
+<title>2</title>
+<ellipse fill="#f44336" stroke="black" cx="724.19" cy="-31.11" rx="91.39" ry="31.11"/>
+<text xml:space="preserve" text-anchor="middle" x="724.19" y="-38.66" font-family="Helvetica,sans-Serif" font-size="11.00" fill="white">[2] Apollo Design Polish</text>
+<text xml:space="preserve" text-anchor="middle" x="724.19" y="-26.66" font-family="Helvetica,sans-Serif" font-size="11.00" fill="white">exp: 3.0d | risk: 1/10</text>
+<text xml:space="preserve" text-anchor="middle" x="724.19" y="-14.66" font-family="Helvetica,sans-Serif" font-size="11.00" fill="white">day 21&#45;24 | slack: 0</text>
+</g>
+<!-- 2&#45;&gt;end -->
+<g id="edge4" class="edge">
+<title>2&#45;&gt;end</title>
+<path fill="none" stroke="#555555" d="M816,-31.11C824.4,-31.11 832.52,-31.11 839.9,-31.11"/>
+<polygon fill="#555555" stroke="#555555" points="839.66,-34.61 849.66,-31.11 839.66,-27.61 839.66,-34.61"/>
+</g>
+<!-- 3&#45;&gt;2 -->
+<g id="edge3" class="edge">
+<title>3&#45;&gt;2</title>
+<path fill="none" stroke="#555555" d="M596.94,-31.11C604.93,-31.11 612.95,-31.11 620.87,-31.11"/>
+<polygon fill="#555555" stroke="#555555" points="620.86,-34.61 630.86,-31.11 620.86,-27.61 620.86,-34.61"/>
+</g>
+</g>
+</svg>
+</div>
+</body>
+</html>

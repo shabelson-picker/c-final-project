@@ -170,6 +170,13 @@
     <ClInclude Include="src\report_exporter.h" />
     <ClInclude Include="src\ui.h" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Ship roles.cfg next to the .exe so the runtime get_exe_dir() lookup
+         always finds it; stays an editable file (not embedded). -->
+    <None Include="..\roles.cfg">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

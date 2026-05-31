@@ -18,13 +18,36 @@
 
 /*
  * Map a day value to a column index within [0, width).
- * project_end is the maximum sched_end across all tasks.
+ * span is the total number of days the axis covers (its rightmost day).
  */
-static int day_to_col(int day, int project_end, int width) {
-    if (project_end <= 0) return 0;
-    int col = (int)((long)day * width / project_end);
+static int day_to_col(int day, int span, int width) {
+    if (span <= 0) return 0;
+    int col = (int)((long)day * width / span);
     if (col >= width) col = width - 1;
+    if (col < 0)      col = 0;
     return col;
+}
+
+/* Output columns consumed by the left label block before the bar area, i.e. the
+ * width of the "%-22s  %-14s  %-18s  %-4s |" header prefix. Keep in sync with it. */
+#define GANTT_AXIS_INDENT 66
+
+/* Print a day-number ruler aligned under the time axis: a value at every 10th
+ * column (matching the tick marks), measured in days from company day 0. */
+static void print_gantt_ruler(int span, int width) {
+    char *ruler = (char *)malloc((size_t)width + 1);
+    int col, k;
+    if (!ruler) return;
+    memset(ruler, ' ', (size_t)width);
+    ruler[width] = '\0';
+    for (col = 0; col < width; col += 10) {
+        char num[16];
+        int  day = (int)((long)col * span / width);
+        int  len = sprintf(num, "%d", day);
+        for (k = 0; k < len && col + k < width; k++) ruler[col + k] = (char)num[k];
+    }
+    printf("%*s%s%s%s\n", GANTT_AXIS_INDENT, "", ANSI_DIM, ruler, ANSI_RESET);
+    free(ruler);
 }
 
 /*
@@ -33,12 +56,12 @@ static int day_to_col(int day, int project_end, int width) {
  *   kind 2 '~' - expected zone    [sched_start+pert_min .. sched_end]
  *   kind 3 '-' - pessimistic zone [sched_end .. sched_start+pert_max]
  */
-static void build_bar(const Task *t, int project_end, int width,
+static void build_bar(const Task *t, int day0, int span, int width,
                       char *bar, char *kind) {
-    int col_start   = day_to_col(t->sched_start,                                   project_end, width);
-    int col_opt_end = day_to_col((int)(t->sched_start + t->pert_min  + 0.5f),      project_end, width);
-    int col_exp_end = day_to_col(t->sched_end,                                     project_end, width);
-    int col_pes_end = day_to_col((int)(t->sched_start + t->pert_max  + 0.5f),      project_end, width);
+    int col_start   = day_to_col(day0 + t->sched_start,                            span, width);
+    int col_opt_end = day_to_col(day0 + (int)(t->sched_start + t->pert_min + 0.5f), span, width);
+    int col_exp_end = day_to_col(day0 + t->sched_end,                              span, width);
+    int col_pes_end = day_to_col(day0 + (int)(t->sched_start + t->pert_max + 0.5f), span, width);
     int i;
 
     memset(bar,  ' ', (size_t)width);
@@ -62,7 +85,7 @@ static int cmp_gantt_row(const void *a, const void *b) {
 }
 
 void render_gantt(const Project *p, const Company *c, int width) {
-    int i, j, project_end = 0;
+    int i, j, project_end = 0, day0 = 0, span, start_col;
     char *bar  = (char *)malloc((size_t)(width + 1));
     char *kind = (char *)malloc((size_t)(width + 1));
     GanttRow *rows = (GanttRow *)malloc((size_t)(p->task_count ? p->task_count : 1) * sizeof(GanttRow));
@@ -79,11 +102,29 @@ void render_gantt(const Project *p, const Company *c, int width) {
         if (p->tasks[i]->sched_end > project_end)
             project_end = p->tasks[i]->sched_end;
 
+    /* Place this project on the absolute company timeline: day 0 = the earliest
+     * start date across all projects (portfolio start). day0 is how many days
+     * after that this project begins; the axis spans [0, day0 + project_end].
+     * No company / no valid start date -> day0 = 0 (project-relative fallback). */
+    if (c && date_is_valid(p->start_date)) {
+        long t0 = 0; int have_t0 = 0;
+        for (i = 0; i < c->project_count; i++) {
+            long sa;
+            if (!date_is_valid(c->projects[i]->start_date)) continue;
+            sa = date_to_days(c->projects[i]->start_date);
+            if (!have_t0 || sa < t0) { t0 = sa; have_t0 = 1; }
+        }
+        if (have_t0) day0 = (int)(date_to_days(p->start_date) - t0);
+    }
+    span = day0 + project_end;
+    if (span <= 0) span = 1;
+    start_col = day_to_col(day0, span, width);
 
-    printf("\n%s=== Gantt Chart  (project duration: %d days) ===%s\n",
-           ANSI_BOLD, project_end, ANSI_RESET);
-    printf("  Legend: %s#%s optimistic  %s~%s expected  %s-%s pessimistic overrun\n",
-           ANSI_BOLD, ANSI_RESET, ANSI_DIM, ANSI_RESET, ANSI_YELLOW, ANSI_RESET);
+    printf("\n%s=== Gantt Chart  (project duration: %d days, starts company-day %d) ===%s\n",
+           ANSI_BOLD, project_end, day0, ANSI_RESET);
+    printf("  Legend: %s#%s optimistic  %s~%s expected  %s-%s pessimistic overrun   %s:%s project start\n",
+           ANSI_BOLD, ANSI_RESET, ANSI_DIM, ANSI_RESET, ANSI_YELLOW, ANSI_RESET, ANSI_CYAN, ANSI_RESET);
+    print_gantt_ruler(span, width);
     printf("%-22s  %-14s  %-18s  %-4s |", "Task", "Criticality", "Assignee", "DAG");
     for (j = 0; j < width; j++) printf(j % 10 == 0 ? "|" : "-");
     printf("\n");
@@ -95,7 +136,7 @@ void render_gantt(const Project *p, const Company *c, int width) {
                                ? company_find_member((Company *)c, t->assignee_id)
                                : NULL;
 
-        build_bar(t, project_end, width, bar, kind);
+        build_bar(t, day0, span, width, bar, kind);
 
         /* Left columns */
         printf("%-22.22s  ", t->title);
@@ -110,19 +151,24 @@ void render_gantt(const Project *p, const Company *c, int width) {
         for (j = 0; j < width; j++) {
             if      (kind[j] == 1) printf("%s%s#%s", ANSI_BOLD, color, ANSI_RESET);
             else if (kind[j] == 2) printf("%s~%s",   ANSI_DIM,         ANSI_RESET);
-            else if (kind[j] == 3) printf("%s-%s",   ANSI_YELLOW,      ANSI_RESET);
-            else                   printf(" ");
+            else if (kind[j] == 3)   printf("%s-%s",   ANSI_YELLOW,      ANSI_RESET);
+            else if (j == start_col) printf("%s:%s",   ANSI_CYAN,        ANSI_RESET);
+            else                     printf(" ");
         }
         printf("\n");
     }
 
-    /* Milestone markers */
+    /* Milestone markers (positioned on the same absolute company timeline). */
     for (i = 0; i < p->milestone_count; i++) {
         Milestone *m   = p->milestones[i];
-        int        col = day_to_col(m->deadline_day, project_end, width);
+        int        col = day_to_col(day0 + m->deadline_day, span, width);
         printf("%s%-28s |%s", ANSI_YELLOW, m->name, ANSI_RESET);
-        for (j = 0; j < width; j++) printf(j == col ? "|" : " ");
-        printf("%s  M%d (day %d)%s\n", ANSI_YELLOW, m->id, m->deadline_day, ANSI_RESET);
+        for (j = 0; j < width; j++) {
+            if      (j == col)       printf("%s|%s", ANSI_YELLOW, ANSI_RESET);
+            else if (j == start_col) printf("%s:%s", ANSI_CYAN,   ANSI_RESET);
+            else                     printf(" ");
+        }
+        printf("%s  M%d (day %d)%s\n", ANSI_YELLOW, m->id, day0 + m->deadline_day, ANSI_RESET);
     }
 
     free(bar);
@@ -171,7 +217,7 @@ void render_gantt_html(FILE *out, const Project *p, const Company *c, int width)
                         ? company_find_member((Company *)c, t->assignee_id) : NULL;
         char left[160], dag[8];
 
-        build_bar(t, project_end, width, bar, kind);
+        build_bar(t, 0, project_end, width, bar, kind);  /* HTML stays project-relative */
 
         if (rows[i].dag > 0) snprintf(dag, sizeof(dag), "%d", rows[i].dag);
         else                 snprintf(dag, sizeof(dag), "-");

@@ -91,30 +91,32 @@ static void choose_role(void) {
 }
 
 int main(void) {
-    Company *c = NULL;
-    int choice;
-
     screen_clear();
     print_banner();
 
-    choose_role();
+    /* Outer session loop: sign in as a role, pick a company, run the company
+     * menu. "Sign out" from the company menu returns here and re-runs role
+     * sign-in; the program exits only via [0] on the company-select menu. */
+    for (;;) {
+        Company *c = NULL;
+        int choice;
 
-    while (!c) {
-        printf(C_BOLD C_CYAN "\n  [1] New company\n  [2] Load company\n  [0] Exit\n" C_RESET);
+        choose_role();
 
-        if (!read_int("  > ", &choice)) continue;
+        while (!c) {
+            printf(C_BOLD C_CYAN "\n  [1] New company\n  [2] Load company\n  [0] Exit\n" C_RESET);
 
-        switch (choice) {
-            case 1: c = company_new_interactive();  break;
-            case 2: c = company_load_interactive(); break;
-            case 0: goodbye(); return 0;
-            default: cprintf(C_RED, "  Invalid option.\n"); break;
+            if (!read_int("  > ", &choice)) continue;
+
+            switch (choice) {
+                case 1: c = company_new_interactive();  break;
+                case 2: c = company_load_interactive(); break;
+                case 0: goodbye(); return 0;
+                default: cprintf(C_RED, "  Invalid option.\n"); break;
+            }
         }
+
+        menu_company(c);
+        company_destroy(c);   /* "Sign out" -> loop back to role sign-in */
     }
-
-    menu_company(c);
-
-    company_destroy(c);
-    goodbye();
-    return 0;
 }

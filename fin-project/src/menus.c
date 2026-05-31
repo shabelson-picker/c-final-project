@@ -991,7 +991,7 @@ static int company_handler(void *ctx, int choice) {
 void menu_company(Company *c) {
     crumb_push(c->name);
     run_menu(c, company_render,
-             "  1. Projects  2. Team  3. Save  4. Portfolio  5. My tasks  6. All-task Gantt  7. Workload  8. Exec report  0. Exit",
+             "  1. Projects  2. Team  3. Save  4. Portfolio  5. My tasks  6. All-task Gantt  7. Workload  8. Exec report  0. Sign out",
              company_handler);
     crumb_pop();
 }
