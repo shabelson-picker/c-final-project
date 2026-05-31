@@ -61,6 +61,38 @@ an id-indexed lookup. ~6 focused test harnesses cover the scheduling invariants.
 - Tie-in to the parent C++ course: a thread-safe `Company` (one writer, many readers)
   is the natural bridge to the multithreading unit.
 
+## What real PM platforms offer, and where they are criticized (survey)
+A scan of Jira, Asana, Monday, MS Project, GanttProject, Wrike (May 2026):
+
+**Features they offer:** Gantt with real dependencies (FS/SS/FF/SF + lag/lead),
+critical path, baselines (planned vs actual / slippage), resource management and
+leveling (utilization, overallocation), % complete and time tracking, milestones,
+dashboards/reporting/KPIs, automations, deep integrations (Git, CI, Slack), multiple
+views (board/list/timeline/calendar), and roles/permissions.
+
+**Common critiques:** overwhelming complexity and cluttered UIs ("too many features,
+constant setting-tweaking"); "timeline" views that aren't real Gantts; **limited
+dependency support and manual timeline recalculation - hidden scheduling conflicts
+surface too late**; weak resource management and reporting in lighter tools;
+fragmentation across integrated tools; paywalled essentials (Gantt/automation).
+
+**How this project already answers them:** a genuine CPM Gantt (not a fake timeline),
+a dependency engine with cycle rejection, and - notably - a cross-project member
+calendar that catches resource conflicts *at schedule time* rather than letting them
+"surface too late." It is intentionally simple (a console app), sidestepping the
+complexity critique.
+
+**Therefore the highest-value, lowest-risk gaps to close here are reporting +
+resource management** (the weak spot of lighter tools), then richer dependencies:
+- *(Implemented this session)* **Resource workload / over-allocation report** - per
+  member, across all projects: task count, committed days, active span, and an
+  OVERALLOCATED flag when assigned work overlaps in absolute time. Directly answers
+  the "conflicts surface too late" + "weak resource management/reporting" critiques.
+- **Dependency types + lag** (FS/SS/FF/SF, +/- lag) - the most-cited scheduling gap.
+- **Baseline vs actual** - snapshot a schedule, report slippage.
+- **% complete / actual dates** - the `status` enum exists; add progress + a
+  planned-vs-actual report.
+
 ## If this were a product
 Multi-company tenancy, an undo/audit log, resource leveling (smooth peaks, not just
 resolve clashes), cost/budget tracking alongside time, and a real calendar (weekends,

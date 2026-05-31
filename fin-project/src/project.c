@@ -25,6 +25,23 @@ long date_to_days(Date d) {
     return era * 146097 + (long)doe - 719468;
 }
 
+/* Civil-from-days (Howard Hinnant): inverse of date_to_days. */
+Date date_from_days(long z) {
+    Date d;
+    long     era;
+    unsigned doe, yoe, doy, mp;
+    z += 719468;
+    era = (z >= 0 ? z : z - 146096) / 146097;
+    doe = (unsigned)(z - era * 146097);                       /* [0, 146096] */
+    yoe = (doe - doe / 1460 + doe / 36524 - doe / 146096) / 365; /* [0, 399] */
+    doy = doe - (365 * yoe + yoe / 4 - yoe / 100);            /* [0, 365]    */
+    mp  = (5 * doy + 2) / 153;                                /* [0, 11]     */
+    d.day   = (int)(doy - (153 * mp + 2) / 5 + 1);            /* [1, 31]     */
+    d.month = (int)(mp < 10 ? mp + 3 : mp - 9);               /* [1, 12]     */
+    d.year  = (int)((long)yoe + era * 400 + (d.month <= 2));
+    return d;
+}
+
 static int ensure_task_cap(Project *p) {
     if (p->task_count < p->task_capacity) return 1;
     int new_cap = p->task_capacity * 2;

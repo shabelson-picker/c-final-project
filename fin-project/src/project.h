@@ -18,6 +18,12 @@ int        date_is_valid(Date d);
 /// <returns>Signed day count relative to the 1970-01-01 epoch.</returns>
 long       date_to_days(Date d);
 
+/// <summary>Inverse of date_to_days: turn a serial day number back into a calendar
+/// date (civil-from-days algorithm). Used to display absolute day values as dates.</summary>
+/// <param name="days">Serial day number (days since 1970-01-01).</param>
+/// <returns>The corresponding Gregorian date.</returns>
+Date       date_from_days(long days);
+
 typedef struct {
     char            name[MAX_NAME_LEN];
     char            save_dir[256];      /* bundle directory; empty = not set */

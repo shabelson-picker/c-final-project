@@ -14,6 +14,7 @@
 #include "report_exporter.h"
 #include "persistence.h"
 #include "roles.h"
+#include "reports.h"
 #include "ui.h"
 
 /* GANTT_WIDTH defined in constants.h */
@@ -959,6 +960,7 @@ static int company_handler(void *ctx, int choice) {
         case 4: if (priv_require(PRIV_VIEW_PORTFOLIO)) render_portfolio_gantt(c, GANTT_WIDTH); break;
         case 5: if (priv_require(PRIV_VIEW_OWN))       show_my_tasks(c); break;
         case 6: if (priv_require(PRIV_VIEW_PORTFOLIO)) render_company_gantt(c, GANTT_WIDTH); break;
+        case 7: if (priv_require(PRIV_VIEW_PORTFOLIO)) render_workload_report(c); break;
         case 1999: project_mayhem_rules(); break;  /* easter egg (undocumented) */
     }
     return 0;
@@ -966,6 +968,8 @@ static int company_handler(void *ctx, int choice) {
 
 void menu_company(Company *c) {
     crumb_push(c->name);
-    run_menu(c, company_render, "  1. Projects    2. Team    3. Save    4. Portfolio    5. My tasks    6. All-task Gantt    0. Exit", company_handler);
+    run_menu(c, company_render,
+             "  1. Projects   2. Team   3. Save   4. Portfolio   5. My tasks   6. All-task Gantt   7. Workload   0. Exit",
+             company_handler);
     crumb_pop();
 }
