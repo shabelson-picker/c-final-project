@@ -3,35 +3,342 @@ meta:
   year: 2026
   month: 6
   day: 1
-  member_ids: [5, 7]
+  member_ids: [1, 4, 5, 7, 9, 11]
 
 tasks:
   -
-    id: 1
-    title: "Borealis Backend Core"
-    description: "Backend - Carol again (clashes with Apollo)"
+    id: 15
+    title: "Schematic Design"
+    description: "board schematic"
+    status: 2
+    pert_min: 3.0000
+    pert_likely: 5.0000
+    pert_max: 8.0000
+    risk: 0.3000
+    required_skills: 4
+    assignee_id: 4
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 0
+    sched_end: 5
+    slack: 0
+    is_critical: 1
+    topo_order: 1
+    pre: []
+    post: [16]
+    alt: []
+    work_pre: []
+  -
+    id: 16
+    title: "PCB Layout"
+    description: "routing & DRC"
+    status: 2
+    pert_min: 3.0000
+    pert_likely: 4.0000
+    pert_max: 7.0000
+    risk: 0.3000
+    required_skills: 4
+    assignee_id: 9
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 5
+    sched_end: 9
+    slack: 0
+    is_critical: 1
+    topo_order: 2
+    pre: [15]
+    post: [17]
+    alt: []
+    work_pre: []
+  -
+    id: 17
+    title: "Board Bring-up"
+    description: "power & clocks"
+    status: 1
+    pert_min: 2.0000
+    pert_likely: 4.0000
+    pert_max: 7.0000
+    risk: 0.4000
+    required_skills: 12
+    assignee_id: 4
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: 3
+    sched_start: 9
+    sched_end: 13
+    slack: 0
+    is_critical: 1
+    topo_order: 3
+    pre: [16]
+    post: [18, 19]
+    alt: []
+    work_pre: []
+  -
+    id: 18
+    title: "Bootloader"
+    description: "secure boot"
+    status: 1
+    pert_min: 3.0000
+    pert_likely: 4.0000
+    pert_max: 7.0000
+    risk: 0.4000
+    required_skills: 8
+    assignee_id: 4
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 13
+    sched_end: 17
+    slack: 36
+    is_critical: 0
+    topo_order: 4
+    pre: [17]
+    post: [28]
+    alt: []
+    work_pre: []
+  -
+    id: 19
+    title: "RTOS Port"
+    description: "scheduler & HAL"
+    status: 1
+    pert_min: 5.0000
+    pert_likely: 8.0000
+    pert_max: 13.0000
+    risk: 0.5000
+    required_skills: 8
+    assignee_id: 9
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 13
+    sched_end: 21
+    slack: 0
+    is_critical: 1
+    topo_order: 5
+    pre: [17]
+    post: [20, 21]
+    alt: []
+    work_pre: []
+  -
+    id: 20
+    title: "Sensor Drivers"
+    description: "I2C/SPI drivers"
     status: 0
     pert_min: 4.0000
-    pert_likely: 5.0000
-    pert_max: 6.0000
-    risk: 0.3000
-    required_skills: 2
-    assignee_id: -1
+    pert_likely: 6.0000
+    pert_max: 9.0000
+    risk: 0.4000
+    required_skills: 8
+    assignee_id: 9
     manually_assigned: 0
+    fixed_time: 0
     milestone_id: -1
+    sched_start: 21
+    sched_end: 27
+    slack: 0
+    is_critical: 1
+    topo_order: 6
+    pre: [19]
+    post: [22]
+    alt: []
+    work_pre: []
   -
-    id: 2
-    title: "Borealis QA Pass"
-    description: "QA - Eve"
+    id: 21
+    title: "Comms Stack"
+    description: "BLE/UART"
+    status: 0
+    pert_min: 4.0000
+    pert_likely: 6.0000
+    pert_max: 10.0000
+    risk: 0.5000
+    required_skills: 8
+    assignee_id: 4
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 21
+    sched_end: 27
+    slack: 4
+    is_critical: 0
+    topo_order: 7
+    pre: [19]
+    post: [23]
+    alt: []
+    work_pre: []
+  -
+    id: 22
+    title: "Power Management"
+    description: "sleep states"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 4.0000
+    pert_max: 7.0000
+    risk: 0.4000
+    required_skills: 8
+    assignee_id: 9
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 27
+    sched_end: 31
+    slack: 0
+    is_critical: 1
+    topo_order: 8
+    pre: [20]
+    post: [23]
+    alt: []
+    work_pre: []
+  -
+    id: 23
+    title: "HW/SW Integration"
+    description: "bring it together"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 5.0000
+    pert_max: 8.0000
+    risk: 0.5000
+    required_skills: 10
+    assignee_id: 9
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 31
+    sched_end: 36
+    slack: 0
+    is_critical: 1
+    topo_order: 9
+    pre: [21, 22]
+    post: [24]
+    alt: []
+    work_pre: []
+  -
+    id: 24
+    title: "Calibration"
+    description: "sensor cal"
     status: 0
     pert_min: 2.0000
     pert_likely: 3.0000
-    pert_max: 4.0000
-    risk: 0.1000
-    required_skills: 16
-    assignee_id: -1
+    pert_max: 5.0000
+    risk: 0.3000
+    required_skills: 4
+    assignee_id: 1
     manually_assigned: 0
+    fixed_time: 0
     milestone_id: -1
-    pre: [1]
+    sched_start: 36
+    sched_end: 39
+    slack: 0
+    is_critical: 1
+    topo_order: 10
+    pre: [23]
+    post: [25]
+    alt: []
+    work_pre: []
+  -
+    id: 25
+    title: "HIL Test"
+    description: "hardware-in-loop QA"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 5.0000
+    pert_max: 7.0000
+    risk: 0.3000
+    required_skills: 16
+    assignee_id: 7
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 39
+    sched_end: 44
+    slack: 0
+    is_critical: 1
+    topo_order: 11
+    pre: [24]
+    post: [26]
+    alt: []
+    work_pre: []
+  -
+    id: 26
+    title: "Compliance"
+    description: "EMC/safety"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 5.0000
+    pert_max: 9.0000
+    risk: 0.6000
+    required_skills: 4
+    assignee_id: 4
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 44
+    sched_end: 49
+    slack: 0
+    is_critical: 1
+    topo_order: 12
+    pre: [25]
+    post: [27]
+    alt: []
+    work_pre: []
+  -
+    id: 27
+    title: "Field Trial"
+    description: "beta units"
+    status: 0
+    pert_min: 2.0000
+    pert_likely: 4.0000
+    pert_max: 7.0000
+    risk: 0.5000
+    required_skills: 16
+    assignee_id: 1
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 49
+    sched_end: 53
+    slack: 0
+    is_critical: 1
+    topo_order: 13
+    pre: [26]
+    post: [28]
+    alt: []
+    work_pre: []
+  -
+    id: 28
+    title: "Release Candidate"
+    description: "RC firmware"
+    status: 0
+    pert_min: 1.0000
+    pert_likely: 2.0000
+    pert_max: 3.0000
+    risk: 0.4000
+    required_skills: 8
+    assignee_id: 9
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: 4
+    sched_start: 53
+    sched_end: 55
+    slack: 0
+    is_critical: 1
+    topo_order: 14
+    pre: [27, 18]
+    post: []
+    alt: []
+    work_pre: []
 
 milestones:
+  -
+    id: 3
+    name: "Bring-up Done"
+    deadline_day: 21
+    priority: 2
+    tasks: [17]
+  -
+    id: 4
+    name: "Borealis RC"
+    deadline_day: 56
+    priority: 3
+    tasks: [28]
