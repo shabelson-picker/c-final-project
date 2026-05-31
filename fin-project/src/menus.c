@@ -961,6 +961,14 @@ static int company_handler(void *ctx, int choice) {
         case 5: if (priv_require(PRIV_VIEW_OWN))       show_my_tasks(c); break;
         case 6: if (priv_require(PRIV_VIEW_PORTFOLIO)) render_company_gantt(c, GANTT_WIDTH); break;
         case 7: if (priv_require(PRIV_VIEW_PORTFOLIO)) render_workload_report(c); break;
+        case 8: {
+            char path[MAX_PATH_LEN];
+            const char *dir = c->save_dir[0] ? c->save_dir : ".";
+            if (!priv_require(PRIV_REPORT)) break;
+            snprintf(path, MAX_PATH_LEN, "%s\\executive_report.html", dir);
+            export_executive_report_html(c, path);
+            break;
+        }
         case 1999: project_mayhem_rules(); break;  /* easter egg (undocumented) */
     }
     return 0;
@@ -969,7 +977,7 @@ static int company_handler(void *ctx, int choice) {
 void menu_company(Company *c) {
     crumb_push(c->name);
     run_menu(c, company_render,
-             "  1. Projects   2. Team   3. Save   4. Portfolio   5. My tasks   6. All-task Gantt   7. Workload   0. Exit",
+             "  1. Projects  2. Team  3. Save  4. Portfolio  5. My tasks  6. All-task Gantt  7. Workload  8. Exec report  0. Exit",
              company_handler);
     crumb_pop();
 }

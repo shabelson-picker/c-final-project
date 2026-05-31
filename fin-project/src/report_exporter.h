@@ -13,4 +13,12 @@
  */
 int export_report_html(const Project *p, const Company *c, const char *filename);
 
+/*
+ * Write a company-wide HTML executive report to 'filename' and open it: an
+ * executive summary (totals + progress), a portfolio table (one row per project),
+ * and an HR section - per-member workload with an over-allocation flag.
+ * Returns 1 on success, 0 on file error.
+ */
+int export_executive_report_html(const Company *c, const char *filename);
+
 #endif /* REPORT_EXPORTER_H */
