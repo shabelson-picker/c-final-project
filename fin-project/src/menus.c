@@ -15,6 +15,7 @@
 #include "persistence.h"
 #include "roles.h"
 #include "reports.h"
+#include "sim.h"
 #include "ui.h"
 
 /* GANTT_WIDTH defined in constants.h */
@@ -853,6 +854,9 @@ static int project_handler(void *ctx, int choice) {
         case 5:
             if (!priv_require(PRIV_ASSIGN)) break;
             run_checklist(pc, roster_render, roster_toggle); company_save(pc->c); break;
+        case 6:
+            if (priv_require(PRIV_SCHEDULE)) menu_simulate(pc->c, pc->idx);
+            break;
     }
     return 0;
 }
@@ -875,7 +879,7 @@ static void open_project(Company *c) {
 
     pc.c = c; pc.idx = idx; pc.p = p;
     run_menu(&pc, NULL,
-             "  1. Tasks    2. Deps    3. Milestones    4. Schedule    5. Members    0. Back",
+             "  1. Tasks   2. Deps   3. Milestones   4. Schedule   5. Members   6. Simulate   0. Back",
              project_handler);
 
     crumb_pop();

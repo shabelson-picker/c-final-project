@@ -139,6 +139,7 @@
     <ClCompile Include="src\algorithms.c" />
     <ClCompile Include="src\roles.c" />
     <ClCompile Include="src\reports.c" />
+    <ClCompile Include="src\sim.c" />
     <ClCompile Include="src\renderer.c" />
     <ClCompile Include="src\persistence.c" />
     <ClCompile Include="src\menus.c" />
@@ -160,6 +161,7 @@
     <ClInclude Include="src\algorithms.h" />
     <ClInclude Include="src\roles.h" />
     <ClInclude Include="src\reports.h" />
+    <ClInclude Include="src\sim.h" />
     <ClInclude Include="src\renderer.h" />
     <ClInclude Include="src\persistence.h" />
     <ClInclude Include="src\menus.h" />
