@@ -4,25 +4,49 @@ digraph datamodel {
   node [shape=record, fontname="Helvetica", fontsize=10, style=filled, fillcolor="#f7f9fc"];
   edge [fontname="Helvetica", fontsize=9, color="#555555"];
 
-  Company [fillcolor="#cfe8ff", label="{Company|name, save_dir\lmembers : TeamMember**\lprojects : Project**\lnext_member_id\l}"];
-  Project [fillcolor="#cfe8ff", label="{Project|name, save_dir, start_date\lstart_node, end_node : Task*\ltasks : Task**\lmilestones : Milestone**\lmember_ids : DynamicIntArray\lnext_task_id, next_milestone_id\l}"];
-  Task [label="{Task|id, title, status\lpert_min/likely/max/exp/var\lrisk, required_skills\lpre/post/alt/work_pre : DynamicIntArray\lassignee_id, manually_assigned\lsched_start/end, latest_start, slack\lis_critical, topo_order\l}"];
+  /* ---- owned aggregate structs (blue) ---- */
+  Company [fillcolor="#cfe8ff", label="{Company|name, save_dir\lmembers : TeamMember**  (owns)\lprojects : Project**  (owns)\lnext_member_id\l--- derived (not persisted) ---\lmem_by_id : TeamMember**  (id index)\lmem_by_id_dirty\l}"];
+  Project [fillcolor="#cfe8ff", label="{Project|name, save_dir, start_date : Date\lstart_node, end_node : Task*  (sentinels)\ltasks : Task**  (owns)\lmilestones : Milestone**  (owns)\lmember_ids : DynamicIntArray  (roster, IDs)\lnext_task_id, next_milestone_id\l--- derived (not persisted) ---\lby_id : Task**  (id index)\lby_id_dirty\l}"];
+  Task [label="{Task|id, title, description, status\lpert_min/likely/max/expected/variance\lrisk, required_skills (bitmask)\lpre_ids / post_ids / alt_ids / work_pre_ids\l    : DynamicIntArray  (owns 4)\lassignee_id, manually_assigned\lfixed_time  (immovable: vacation)\lmilestone_id\l--- set by scheduler ---\lsched_start/end, latest_start, slack\lis_critical, topo_order, min_start\l}"];
   Milestone [label="{Milestone|id, name\ldeadline_day, priority\ltask_ids : int*, task_count\l}"];
-  TeamMember [label="{TeamMember|id, name, role\lskills (bitmask), availability\lproject_ids : DynamicIntArray (derived)\ltasks : TaskRefArray\l}"];
-  DynamicIntArray [fillcolor="#fff4e6", label="{DynamicIntArray|data : int*\lcount, capacity\l}"];
+  TeamMember [label="{TeamMember|id, name, role  (-\> roles.cfg)\lskills (bitmask), availability\l--- derived (not persisted) ---\lproject_ids : DynamicIntArray\ltasks : TaskRefArray\l}"];
+
+  /* ---- generic containers (orange) ---- */
+  DynamicIntArray [fillcolor="#fff4e6", label="{DynamicIntArray|data : int*\lcount, capacity  (doubling growth)\lsort_insert / find_index (bsearch)\l}"];
   TaskRefArray [fillcolor="#fff4e6", label="{TaskRefArray|data : TaskRef*\lcount, capacity\l}"];
   TaskRef [fillcolor="#fff4e6", label="{TaskRef|project_id\ltask_id\l}"];
 
+  /* ---- access control (green) ---- */
+  Role [fillcolor="#e6ffe6", label="{Role  (parsed from roles.cfg)|name\lprivs : uint32  (Privilege bitmask)\l}"];
+  Privilege [fillcolor="#e6ffe6", label="{Privilege  &lt;&lt;enum bitmask&gt;&gt;|VIEW_OWN  VIEW_PROJECT  VIEW_PORTFOLIO\lEDIT_TASK  EDIT_DEPS  ASSIGN\lSCHEDULE  REPORT  ADMIN(=all)\l}"];
+  Session [fillcolor="#e6ffe6", label="{Session role  (module state in roles.c)|g_privs : uint32\lg_role_name\lpriv_has / priv_require gate every action\l}"];
+
+  /* ---- enums (grey) ---- */
+  TaskStatus [fillcolor="#eeeeee", label="{TaskStatus  &lt;&lt;enum&gt;&gt;|TODO  IN_PROGRESS  DONE\lCANCELLED  BLOCKED\l}"];
+  Skill [fillcolor="#eeeeee", label="{Skill  &lt;&lt;enum bitmask&gt;&gt;|FRONTEND  BACKEND  HARDWARE\lEMBEDDED  QA  DEVOPS  DESIGN  PM\l}"];
+
+  /* ---- ownership (filled diamond = composition, frees on destroy) ---- */
   Company -> TeamMember [arrowhead=diamond, label="owns *"];
   Company -> Project    [arrowhead=diamond, label="owns *"];
-  Project -> Task       [arrowhead=diamond, label="owns *"];
+  Project -> Task       [arrowhead=diamond, label="owns * + 2 sentinels"];
   Project -> Milestone  [arrowhead=diamond, label="owns *"];
   Task -> DynamicIntArray    [arrowhead=diamond, label="4x dep lists"];
   TeamMember -> TaskRefArray [arrowhead=diamond, label="tasks"];
   TaskRefArray -> TaskRef    [arrowhead=diamond, label="*"];
 
-  Project -> DynamicIntArray    [style=dashed, label="member_ids"];
-  TeamMember -> DynamicIntArray [style=dashed, label="project_ids"];
-  Project -> TeamMember [style=dashed, color="#999999", label="roster (by id)"];
-  Task -> TeamMember    [style=dashed, color="#999999", label="assignee_id"];
+  /* ---- references / derived (dashed, no ownership) ---- */
+  Project    -> DynamicIntArray [style=dashed, label="member_ids (roster)"];
+  TeamMember -> DynamicIntArray [style=dashed, label="project_ids (derived)"];
+  Project    -> TeamMember [style=dashed, color="#999999", label="roster by id  (master)"];
+  Task       -> TeamMember [style=dashed, color="#999999", label="assignee_id"];
+  Company    -> TeamMember [style=dotted, color="#3a8a3a", label="mem_by_id (O(1))"];
+  Project    -> Task       [style=dotted, color="#3a8a3a", label="by_id (O(1))"];
+
+  Task       -> TaskStatus [style=dashed, color="#888888"];
+  Task       -> Skill      [style=dashed, color="#888888", label="required_skills"];
+  TeamMember -> Skill      [style=dashed, color="#888888", label="skills"];
+  Milestone  -> Task       [style=dashed, color="#999999", label="task_ids (IDs)"];
+  TeamMember -> Role       [style=dashed, color="#3a8a3a", label="role name"];
+  Role       -> Privilege  [style=dashed, color="#3a8a3a", label="privs"];
+  Session    -> Role       [style=dashed, color="#3a8a3a", label="current"];
 }

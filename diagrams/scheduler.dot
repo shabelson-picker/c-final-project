@@ -5,32 +5,34 @@ digraph scheduler {
   edge [fontname="Helvetica", fontsize=9, color="#555555"];
 
   A [label="menu_schedule: Generate"];
-  B [shape=diamond, label="pick strategy\nearliest / risk / pessimistic"];
-  A -> B;
+  B [shape=diamond, label="pick strategy  (effective_duration)\nearliest-deadline / risk-weighted / pessimistic"];
+  P [shape=diamond, label="pick policy  (assign_set_policy)\nearliest-free / balanced / best-fit"];
+  A -> B -> P;
 
   subgraph cluster_assign {
-    label="assign_members_greedy(c, idx, strategy)";
+    label="assign_members_greedy(company, idx, strategy)";
     style=filled; color="#eef4ff";
-    C1 [label="clear_work_assignments\n(keep pinned)"];
+    X0 [label="compute_external_floor\ncross-project member calendar:\nseed member_free_day + Task.min_start\nfrom commitments in OTHER projects"];
+    C1 [label="clear_work_assignments\n(keep manually_assigned / fixed_time pins)"];
     C2 [label="schedule_project(strategy)"];
-    C3 [shape=diamond, label="pass loop\n(<= MAX_ASSIGN_PASSES)"];
+    C3 [shape=diamond, label="pass loop\n(<= n^2 + 1)"];
     C4 [label="sort tasks by sched_start"];
-    C5 [label="assignment_pass:\nfind_best_member per task,\nadd work_pre on member conflict"];
+    C5 [label="assignment_pass:\nfind_best_member per task (policy key),\nadd work_pre on member conflict"];
     C6 [shape=diamond, label="all assigned?"];
     C7 [label="schedule_project(strategy)"];
     C8 [label="resolve_resource_overlaps"];
-    C1 -> C2 -> C3 -> C4 -> C5 -> C6;
+    X0 -> C1 -> C2 -> C3 -> C4 -> C5 -> C6;
     C6 -> C7 [label="no (progress)"];
     C7 -> C3;
     C6 -> C8 [label="yes / stuck"];
   }
-  B -> C1;
+  P -> X0;
 
   subgraph cluster_sp {
     label="schedule_project (CPM)";
     style=filled; color="#fff4e6";
-    S1 [label="topo_sort\n(Kahn: pre + work_pre)"];
-    S2 [label="forward_pass\nsched_start = max(pre, work_pre ends)"];
+    S1 [label="topo_sort\n(Kahn: pre + work_pre in-degree)"];
+    S2 [label="forward_pass\nsched_start = max(pre, work_pre ends, min_start)\nfixed_time blocks keep their window"];
     S3 [label="backward_pass\nlatest_start, slack, is_critical"];
     S4 [label="stamp topo_order"];
     S1 -> S2 -> S3 -> S4;
@@ -43,7 +45,7 @@ digraph scheduler {
     R1 [label="schedule_project"];
     R2 [label="group by assignee,\nsort by start"];
     R3 [shape=diamond, label="adjacent same-member\noverlap?"];
-    R4 [label="add work_pre\n(earlier -> later)"];
+    R4 [label="add work_pre (earlier -> later);\nif a fixed_time block: flexible task waits"];
     R5 [label="done: no overlaps"];
     R1 -> R2 -> R3;
     R3 -> R4 [label="yes"];
@@ -53,7 +55,7 @@ digraph scheduler {
   C8 -> R1 [style=dotted, label="calls"];
 
   D [label="schedule_project(strategy)"];
-  E [shape=box, style=filled, fillcolor="#d8f5d8", label="render_gantt\n(rows by start, DAG-order column)"];
+  E [shape=box, style=filled, fillcolor="#d8f5d8", label="render_gantt\n(rows by start, DAG-order column,\nabsolute company timeline + ruler)"];
   F [label="resolve_unassigned\n(cascade: suggest off-roster member)"];
   G [label="company_save"];
   C8 -> D -> E -> F -> G;

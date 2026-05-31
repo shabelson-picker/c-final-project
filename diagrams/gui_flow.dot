@@ -1,52 +1,80 @@
 digraph gui {
   rankdir=TB;
-  graph [fontname="Helvetica", label="Project Mayhem Management - GUI Flow", labelloc=t, fontsize=16];
+  graph [fontname="Helvetica", label="Project Mayhem Management - GUI Flow (privilege-gated)", labelloc=t, fontsize=16];
   node [fontname="Helvetica", fontsize=10];
   edge [fontname="Helvetica", fontsize=9, color="#555555"];
 
+  /* ---- startup: company first, then role ---- */
   main   [shape=oval, label="main()"];
-  m0     [shape=diamond, label="New / Load / Exit"];
+  m0     [shape=diamond, label="[1] New  [2] Load  [0] Exit"];
   newc   [shape=box, label="company_new_interactive\n(name + dir_browser)"];
-  loadc  [shape=box, label="company_load_interactive\n(dir_browser)"];
+  loadc  [shape=box, label="company_load_interactive\n(file/dir browser)"];
   exit0  [shape=oval, label="goodbye + quit"];
 
-  menu_company [shape=box, style=filled, fillcolor="#cfe8ff", label="menu_company\nProjects / Team / Save / Exit"];
+  role   [shape=box, style=filled, fillcolor="#e6ffe6",
+          label="choose_role\nsign in (roles.cfg) | [-1] Exit\nsets session privilege mask"];
+
+  /* ---- company menu (privilege-gated) ---- */
+  menu_company [shape=box, style=filled, fillcolor="#cfe8ff",
+    label="menu_company\n1 Projects  2 Team  3 Save  4 Portfolio\n5 My tasks  6 All-task Gantt  7 Workload\n8 Exec report  0 Sign out"];
   rules  [shape=box, style=filled, fillcolor="#ffe0e0", label="1999 -> Project Mayhem rules\n(hidden)"];
   projmenu [shape=box, label="menu_company_projects\nNew / Open"];
   teammenu [shape=box, label="menu_company_team\nAdd / Remove"];
   create [shape=box, label="create_project"];
 
-  open   [shape=box, style=filled, fillcolor="#cfe8ff", label="open_project\nTasks/Deps/Milestones/Schedule/Members"];
-  tasks  [shape=box, label="menu_tasks\nList/Add/Remove/Edit/Status/Link/Deps/Assign"];
+  /* ---- company-wide views (read models) ---- */
+  portfolio [shape=box, style=filled, fillcolor="#d8f5d8", label="render_portfolio_gantt\n(projects as bars)"];
+  cgantt    [shape=box, style=filled, fillcolor="#d8f5d8", label="render_company_gantt\n(all tasks, abs timeline)"];
+  workload  [shape=box, style=filled, fillcolor="#d8f5d8", label="render_workload_report\n(over-allocation)"];
+  mytasks   [shape=box, style=filled, fillcolor="#d8f5d8", label="show_my_tasks\n(VIEW_OWN)"];
+  exec      [shape=box, style=filled, fillcolor="#d8f5d8", label="export_executive_report_html"];
+
+  /* ---- project menu ---- */
+  open   [shape=box, style=filled, fillcolor="#cfe8ff",
+    label="open_project\n1 Tasks  2 Deps  3 Milestones\n4 Schedule  5 Members  6 Simulate"];
+  tasks  [shape=box, label="menu_tasks\nList/Add/Remove/Edit/Status\nLink/Deps/Assign/Split"];
   deps   [shape=box, label="menu_deps\nlink + view"];
   mile   [shape=box, label="menu_milestones\nList / Add"];
-  sched  [shape=box, style=filled, fillcolor="#cfe8ff", label="menu_schedule\nGenerate/Report/Gantt/DAG/Export"];
+  sched  [shape=box, style=filled, fillcolor="#cfe8ff",
+    label="menu_schedule\nGenerate/Report/Gantt/DAG\nExport .dot/Export report/Request vacation"];
   roster [shape=box, label="roster checklist\n(run_checklist)"];
   pin    [shape=box, label="manual_assign\npin member -> task"];
+  sim    [shape=box, style=filled, fillcolor="#fff0cc", label="menu_simulate\nday-by-day sandbox\n(clone -> events -> apply/discard)"];
   gen    [shape=box, style=filled, fillcolor="#d8f5d8", label="scheduler pipeline\n(see scheduler diagram)"];
   report [shape=box, label="export_report_html\nHTML + inline-SVG DAG"];
 
+  /* ---- flow ---- */
   main -> m0;
   m0 -> newc [label="New"];
   m0 -> loadc [label="Load"];
   m0 -> exit0 [label="Exit"];
-  newc -> menu_company;
-  loadc -> menu_company;
+  newc -> role;
+  loadc -> role;
+  role -> menu_company [label="role set"];
+  role -> exit0 [label="-1", style=dashed];
+  menu_company -> role [label="0 Sign out\n(company stays loaded)", style=dashed, constraint=false];
 
-  menu_company -> projmenu;
-  menu_company -> teammenu;
+  menu_company -> projmenu  [label="VIEW_PROJECT"];
+  menu_company -> teammenu  [label="ADMIN"];
+  menu_company -> portfolio [label="VIEW_PORTFOLIO"];
+  menu_company -> cgantt    [label="VIEW_PORTFOLIO"];
+  menu_company -> workload  [label="VIEW_PORTFOLIO"];
+  menu_company -> mytasks   [label="VIEW_OWN"];
+  menu_company -> exec      [label="REPORT"];
   menu_company -> rules [style=dashed];
-  projmenu -> create [label="New"];
-  projmenu -> open [label="Open"];
 
-  open -> tasks;
-  open -> deps;
+  projmenu -> create [label="New (ADMIN)"];
+  projmenu -> open   [label="Open"];
+
+  open -> tasks  [label="EDIT_TASK"];
+  open -> deps   [label="EDIT_DEPS"];
   open -> mile;
-  open -> sched;
-  open -> roster [label="Members"];
+  open -> sched  [label="SCHEDULE/REPORT"];
+  open -> roster [label="Members (ASSIGN)"];
+  open -> sim    [label="Simulate (SCHEDULE)"];
 
-  tasks -> pin [label="Assign"];
+  tasks -> pin [label="Assign (ASSIGN)"];
   tasks -> deps [label="Deps"];
-  sched -> gen [label="Generate"];
-  sched -> report [label="Export report"];
+  sched -> gen [label="Generate (SCHEDULE)"];
+  sched -> report [label="Export report (REPORT)"];
 }
