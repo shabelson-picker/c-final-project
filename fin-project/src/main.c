@@ -52,11 +52,12 @@ static void print_privs(uint32_t mask) {
     if (first) cprintf(C_DIM, "none");
 }
 
-/* Pick a role at startup as a selectable menu; sets the session privilege mask.
+/* Sign in as a role: a selectable menu that sets the session privilege mask.
  * roles.cfg is looked up in the working directory, then next to the executable.
  * If it can't be read, only the all-powerful System Admin is offered. The menu
- * loops until a valid choice is entered (empty line / EOF defaults to Admin). */
-static void choose_role(void) {
+ * loops until a valid choice is entered (empty line / EOF defaults to Admin).
+ * Returns 1 if the user chose to exit the program, 0 once a role is set. */
+static int choose_role(void) {
     Role roles[MAX_ROLES];
     int  n, i, sel = 0;
 
@@ -76,47 +77,58 @@ static void choose_role(void) {
     for (i = 0; i < n; i++) {
         printf("    [%d] %-16.16s - ", i + 1, roles[i].name); print_privs(roles[i].privs); printf("\n");
     }
+    cprintf(C_DIM, "   [-1] Exit program\n");
 
     for (;;) {
         int r = read_int("  Select role: ", &sel);
-        if (r == -1) { sel = 0; break; }                  /* empty / EOF -> default admin */
+        if (r == -1) {
+            if (feof(stdin)) return 1;                    /* EOF -> exit program */
+            sel = 0; break;                               /* empty Enter -> default admin */
+        }
+        if (r == 1 && sel == -1) return 1;                /* exit program */
         if (r == 1 && sel >= 0 && sel <= n) break;        /* valid selection */
-        cprintf(C_YELLOW, "  Enter a number between 0 and %d.\n", n);
+        cprintf(C_YELLOW, "  Enter a number between -1 and %d.\n", n);
     }
 
     if (sel == 0) roles_set_current("System Admin", PRIV_ALL);
     else          roles_set_current(roles[sel - 1].name, roles[sel - 1].privs);
 
     cprintf(C_GREEN, "  Signed in as %s.\n", roles_current_name());
+    return 0;
 }
 
 int main(void) {
+    Company *c = NULL;
+    int choice;
+
     screen_clear();
     print_banner();
 
-    /* Outer session loop: sign in as a role, pick a company, run the company
-     * menu. "Sign out" from the company menu returns here and re-runs role
-     * sign-in; the program exits only via [0] on the company-select menu. */
-    for (;;) {
-        Company *c = NULL;
-        int choice;
+    /* Pick a company first, so signing out (then re-signing in as another role)
+     * keeps the same company loaded - no reload on each role switch. */
+    while (!c) {
+        int r;
+        printf(C_BOLD C_CYAN "\n  [1] New company\n  [2] Load company\n  [0] Exit\n" C_RESET);
 
-        choose_role();
+        r = read_int("  > ", &choice);
+        if (r == -1 && feof(stdin)) { goodbye(); return 0; }  /* EOF -> quit */
+        if (r != 1) continue;                                 /* empty/invalid -> re-prompt */
 
-        while (!c) {
-            printf(C_BOLD C_CYAN "\n  [1] New company\n  [2] Load company\n  [0] Exit\n" C_RESET);
-
-            if (!read_int("  > ", &choice)) continue;
-
-            switch (choice) {
-                case 1: c = company_new_interactive();  break;
-                case 2: c = company_load_interactive(); break;
-                case 0: goodbye(); return 0;
-                default: cprintf(C_RED, "  Invalid option.\n"); break;
-            }
+        switch (choice) {
+            case 1: c = company_new_interactive();  break;
+            case 2: c = company_load_interactive(); break;
+            case 0: goodbye(); return 0;
+            default: cprintf(C_RED, "  Invalid option.\n"); break;
         }
-
-        menu_company(c);
-        company_destroy(c);   /* "Sign out" -> loop back to role sign-in */
     }
+
+    /* Session loop: sign in as a role and run the company menu. "Sign out" from
+     * the company menu returns here to re-run role sign-in (company stays
+     * loaded); choosing Exit on the role menu quits. */
+    while (!choose_role())
+        menu_company(c);
+
+    company_destroy(c);
+    goodbye();
+    return 0;
 }

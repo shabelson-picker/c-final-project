@@ -146,7 +146,9 @@ void run_menu(void *ctx,
         crumb_refresh();
         if (render) render(ctx);
         printf(C_BOLD C_CYAN "%s" C_RESET "\n", options);
-        { int _r = read_nav("  > ", &choice); if (_r != 1) { screen_pause(); continue; } }
+        { int _r = read_nav("  > ", &choice);
+          if (_r == -1 && feof(stdin)) break;                 /* EOF -> leave menu */
+          if (_r != 1) { screen_pause(); continue; } }
         if (handler(ctx, choice)) break;
         screen_pause();
     }
@@ -161,7 +163,9 @@ static void run_checklist(void *ctx,
     for (;;) {
         crumb_refresh();
         render(ctx);
-        { int _r = read_nav("  > ", &n); if (_r != 1) continue; }
+        { int _r = read_nav("  > ", &n);
+          if (_r == -1 && feof(stdin)) break;                 /* EOF -> leave checklist */
+          if (_r != 1) continue; }
         if (n == 0) break;
         toggle(ctx, n);
     }
