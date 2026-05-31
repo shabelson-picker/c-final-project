@@ -94,6 +94,14 @@ summaries + diagrams already in the repo:
 ## F. Optional polish (depth, not required for 100)
 - [ ] The **auto-split-around-vacation** (`Subtask`) feature - true preemption; a
   standout demo if time allows (design is locked in `.memory`).
+- [ ] **Subcontractor / temp worker** - a third staffing option beyond on-roster
+  assignment and "hire from company". A *temp, external* worker assigned **exclusively
+  to one task**: brought in to cover a task the roster can't, does only that task, then
+  leaves. A `TeamMember` with an `is_temp` flag + bound task; `find_best_member` never
+  considers a temp for other tasks; the bound task is pinned to them; no cross-project
+  commitments (external -> floor 0). Entry points: a third choice in the
+  `resolve_unassigned` cascade and a sim "hire subcontractor" event. Natural hook for a
+  future **cost/budget** field (external hire = $$). (Design notes in `.memory`.)
 - [ ] Convert demo data churn out of git; keep the ZIP lean.
 - [ ] A one-page **user guide** (key bindings / menu map) for the presentation appendix.
 
