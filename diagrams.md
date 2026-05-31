@@ -261,3 +261,37 @@ flowchart TD
     classDef exist fill:#eef4ff,stroke:#5577aa;
     classDef out fill:#d8f5d8,stroke:#3a8a3a;
 ```
+
+---
+
+## 5. Scheduling strategies & assignment policies (one diagram each)
+
+A focused diagram per strategy/policy lives in `diagrams/` (rendered `.svg`/`.png`);
+the tables below are the source of truth.
+
+### Scheduling strategies - `effective_duration(task, strategy)`
+Each strategy differs *only* in how a task's days are computed; the CPM pipeline is
+identical. Worked on a shared task **min=2, likely=4, max=12, risk=0.5**
+(`pert_expected = (2 + 4*4 + 12)/6 = 5`):
+
+| Strategy | Formula | Example | Diagram |
+|----------|---------|---------|---------|
+| Earliest-deadline (default) | `pert_expected` | **5 d** | `sched_earliest` |
+| Risk-weighted critical | `pert_expected * (1 + risk*0.5)` | 5 * 1.25 = **6 d** | `sched_risk` |
+| Pessimistic (worst-case) | `pert_max` | **12 d** | `sched_pessimistic` |
+
+### Assignment policies - `score_key` (lexicographic, lower wins)
+Each policy reorders the same 4-field key `(free_day, load, surplus, id)`;
+`surplus = popcount(skills & ~required_skills)`. Worked on a shared set of qualified
+candidates for a BACKEND task:
+
+`Spec` surplus=0 free=8 load=2 | `Free` surplus=2 free=1 load=5 | `Light` surplus=1 free=4 load=0
+
+| Policy | Key order | Primary | Picks | Diagram |
+|--------|-----------|---------|-------|---------|
+| Earliest-free (default) | `[free_day, load, surplus, id]` | free_day | **Free** (1) | `policy_earliest_free` |
+| Balanced workload | `[load, free_day, surplus, id]` | load | **Light** (0) | `policy_balanced` |
+| Best skill-fit | `[surplus, free_day, load, id]` | surplus | **Spec** (0) | `policy_best_fit` |
+
+The same inputs route to three different members - that is the whole point of the policy
+knob, and why the worked example uses one shared candidate set.
