@@ -121,6 +121,24 @@ int        project_link_tasks(Project *p, int pre_id, int post_id);
 /// <returns>1 on success, 0 if either was not found.</returns>
 int        project_link_task_milestone(Project *p, int task_id, int milestone_id);
 
+/* A milestone's health against its deadline_day. */
+typedef enum {
+    MS_NO_DATA,    /* no scheduled tasks attached            */
+    MS_ON_TRACK,   /* forecast comfortably before deadline   */
+    MS_AT_RISK,    /* forecast within a small buffer         */
+    MS_LATE        /* forecast past the deadline             */
+} MilestoneStatus;
+
+/// <summary>Forecast completion day of a milestone = latest sched_end among its
+/// attached tasks. Returns -1 if none are scheduled.</summary>
+int             milestone_forecast_day(const Project *p, const Milestone *m);
+
+/// <summary>Classify a milestone against its deadline_day (see MilestoneStatus).</summary>
+MilestoneStatus milestone_status(const Project *p, const Milestone *m);
+
+/// <summary>Short label for a MilestoneStatus ("ON TRACK" / "AT RISK" / "LATE" / "-").</summary>
+const char     *milestone_status_label(MilestoneStatus s);
+
 /// <summary>Split a task into two sequential halves: the task becomes "part 1"
 /// (duration scaled by first_fraction) and a new "part 2" task takes the remaining
 /// duration and the task's successors, chained part1 -> part2. PERT estimates are

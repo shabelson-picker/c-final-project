@@ -227,6 +227,22 @@ void schedule_print_report(const Project *p) {
                 t->sched_start, t->sched_end, t->slack,
                 t->is_critical ? "[CRITICAL]" : "");
     }
+
+    if (p->milestone_count > 0) {
+        cprintf(C_BOLD, "\n-- Milestones --\n");
+        cprintf(C_BOLD, "%-26s  %8s  %8s  %s\n", "Name", "Deadline", "Forecast", "Status");
+        for (i = 0; i < p->milestone_count; i++) {
+            Milestone      *m  = p->milestones[i];
+            MilestoneStatus st = milestone_status(p, m);
+            int             fc = milestone_forecast_day(p, m);
+            const char     *col = (st == MS_LATE) ? C_RED
+                                : (st == MS_AT_RISK) ? C_YELLOW
+                                : (st == MS_ON_TRACK) ? C_GREEN : C_DIM;
+            printf("%-26.26s  %6dd   ", m->name, m->deadline_day);
+            if (fc >= 0) printf("%6dd   ", fc); else printf("%8s", "-  ");
+            cprintf(col, "%s\n", milestone_status_label(st));
+        }
+    }
 }
 
 /* =========================================================================

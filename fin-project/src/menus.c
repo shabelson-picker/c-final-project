@@ -551,10 +551,20 @@ static int milestones_handler(void *ctx, int choice) {
     switch (choice) {
         case 0: return 1;
         case 1:
+            if (p->milestone_count == 0) { cprintf(C_DIM, "  No milestones.\n"); break; }
             for (i = 0; i < p->milestone_count; i++) {
-                fputs(ui_zebra(i), stdout);
-                milestone_print(p->milestones[i]);
-                fputs(C_RESET, stdout);
+                Milestone      *m  = p->milestones[i];
+                MilestoneStatus st = milestone_status(p, m);
+                int             fc = milestone_forecast_day(p, m);
+                const char     *col = (st == MS_LATE) ? C_RED
+                                    : (st == MS_AT_RISK) ? C_YELLOW
+                                    : (st == MS_ON_TRACK) ? C_GREEN : C_DIM;
+                cprintf(ui_zebra(i), "  [M%d] %-26.26s  deadline day %-4d  forecast %s",
+                        m->id, m->name, m->deadline_day,
+                        fc >= 0 ? "" : "(none)");
+                if (fc >= 0) printf("day %-4d", fc);
+                printf("  ");
+                cprintf(col, "%s\n", milestone_status_label(st));
             }
             break;
         case 2: add_milestone(p); break;

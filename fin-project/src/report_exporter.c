@@ -124,17 +124,22 @@ static void write_task_table(FILE *f, const Project *p, const Company *c) {
 static void write_milestones(FILE *f, const Project *p) {
     int i;
     if (p->milestone_count == 0) return;
-    fprintf(f, "<h2>Milestones</h2>\n<table>\n"
-               "<tr><th>ID</th><th>Name</th><th>Deadline (day)</th>"
-               "<th>Priority</th><th>Tasks</th></tr>\n");
+    fprintf(f, "<h2>Milestones</h2>\n<div class=\"card\"><table>\n"
+               "<tr><th>Name</th><th>Deadline</th><th>Forecast</th>"
+               "<th>Priority</th><th>Tasks</th><th>Status</th></tr>\n");
     for (i = 0; i < p->milestone_count; i++) {
-        Milestone *m = p->milestones[i];
-        fprintf(f, "<tr><td>M%d</td><td>", m->id);
+        Milestone      *m  = p->milestones[i];
+        MilestoneStatus st = milestone_status(p, m);
+        int             fc = milestone_forecast_day(p, m);
+        const char     *pill = (st == MS_LATE) ? "over" : (st == MS_AT_RISK) ? "idle" : "ok";
+        fprintf(f, "<tr><td>");
         html_fputs(f, m->name);
-        fprintf(f, "</td><td>%d</td><td>%d</td><td>%d</td></tr>\n",
-                m->deadline_day, m->priority, m->task_count);
+        fprintf(f, "</td><td>day %d</td>", m->deadline_day);
+        if (fc >= 0) fprintf(f, "<td>day %d</td>", fc); else fprintf(f, "<td>-</td>");
+        fprintf(f, "<td>%d</td><td>%d</td><td><span class=\"pill %s\">%s</span></td></tr>\n",
+                m->priority, m->task_count, pill, milestone_status_label(st));
     }
-    fprintf(f, "</table>\n");
+    fprintf(f, "</table></div>\n");
 }
 
 /* Inline an SVG file into the report (skipping the <?xml?>/DOCTYPE prolog).
@@ -210,6 +215,7 @@ int export_executive_report_html(const Company *c, const char *filename) {
     WorkloadStat wl[256];
     int   wln, i, j;
     int   total_tasks = 0, total_done = 0, over_members = 0;
+    int   ms_total = 0, ms_risk = 0;
     char  title[160];
     time_t now = time(NULL);
     struct tm *lt = localtime(&now);
@@ -225,6 +231,14 @@ int export_executive_report_html(const Company *c, const char *filename) {
     }
     wln = compute_member_workload(c, wl, 256);
     for (i = 0; i < wln; i++) if (wl[i].overallocated) over_members++;
+    for (i = 0; i < c->project_count; i++) {
+        Project *p = c->projects[i];
+        for (j = 0; j < p->milestone_count; j++) {
+            MilestoneStatus st = milestone_status(p, p->milestones[j]);
+            ms_total++;
+            if (st == MS_LATE || st == MS_AT_RISK) ms_risk++;
+        }
+    }
 
     snprintf(title, sizeof title, "%.120s - Executive Report", c->name);
     write_modern_head(f, title);
@@ -244,6 +258,8 @@ int export_executive_report_html(const Company *c, const char *filename) {
             total_tasks ? (100 * total_done / total_tasks) : 0);
     fprintf(f, "<div class=\"kpi\"><div class=\"n\" style=\"color:%s\">%d</div><div class=\"l\">Overallocated</div></div>\n",
             over_members ? "var(--warn)" : "var(--ok)", over_members);
+    fprintf(f, "<div class=\"kpi\"><div class=\"n\" style=\"color:%s\">%d/%d</div><div class=\"l\">Milestones at risk</div></div>\n",
+            ms_risk ? "var(--warn)" : "var(--ok)", ms_risk, ms_total);
     fprintf(f, "</div>\n");
 
     /* Portfolio table */
@@ -296,6 +312,31 @@ int export_executive_report_html(const Company *c, const char *filename) {
         fprintf(f, "</td></tr>\n");
     }
     fprintf(f, "</table></div>\n");
+
+    /* Milestones across all projects */
+    if (ms_total > 0) {
+        fprintf(f, "<h2>Milestones</h2>\n<div class=\"card\"><table>\n"
+                   "<tr><th>Project</th><th>Milestone</th><th>Deadline</th>"
+                   "<th>Forecast</th><th>Status</th></tr>\n");
+        for (i = 0; i < c->project_count; i++) {
+            Project *p = c->projects[i];
+            for (j = 0; j < p->milestone_count; j++) {
+                Milestone      *m  = p->milestones[j];
+                MilestoneStatus st = milestone_status(p, m);
+                int             fc = milestone_forecast_day(p, m);
+                const char     *pill = (st == MS_LATE) ? "over" : (st == MS_AT_RISK) ? "idle" : "ok";
+                fprintf(f, "<tr><td>");
+                html_fputs(f, p->name);
+                fprintf(f, "</td><td>");
+                html_fputs(f, m->name);
+                fprintf(f, "</td><td>day %d</td>", m->deadline_day);
+                if (fc >= 0) fprintf(f, "<td>day %d</td>", fc); else fprintf(f, "<td>-</td>");
+                fprintf(f, "<td><span class=\"pill %s\">%s</span></td></tr>\n",
+                        pill, milestone_status_label(st));
+            }
+        }
+        fprintf(f, "</table></div>\n");
+    }
 
     fprintf(f, "</div>\n</body>\n</html>\n");
     fclose(f);

@@ -272,6 +272,32 @@ int project_link_task_milestone(Project* p, int task_id, int milestone_id) {
 	return milestone_add_task(m, task_id);
 }
 
+int milestone_forecast_day(const Project* p, const Milestone* m) {
+	int i, fc = -1;
+	for (i = 0; i < m->task_count; i++) {
+		Task* t = project_find_task(p, m->task_ids[i]);
+		if (t && t->sched_end > fc) fc = t->sched_end;
+	}
+	return fc;
+}
+
+MilestoneStatus milestone_status(const Project* p, const Milestone* m) {
+	int fc = milestone_forecast_day(p, m);
+	if (fc < 0)                  return MS_NO_DATA;
+	if (fc > m->deadline_day)    return MS_LATE;
+	if (fc >= m->deadline_day - 2) return MS_AT_RISK;   /* within a 2-day buffer */
+	return MS_ON_TRACK;
+}
+
+const char* milestone_status_label(MilestoneStatus s) {
+	switch (s) {
+		case MS_ON_TRACK: return "ON TRACK";
+		case MS_AT_RISK:  return "AT RISK";
+		case MS_LATE:     return "LATE";
+		default:          return "-";
+	}
+}
+
 Task* project_split_task(Project* p, int task_id, float first_fraction) {
 	Task* a = project_find_task(p, task_id);   /* becomes "part 1" */
 	Task* b;
