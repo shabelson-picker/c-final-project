@@ -195,3 +195,42 @@ function-pointer handler (a C stand-in for the strategy/command pattern), which 
 earlier class of "invalid input exits the menu" bugs. Breadcrumb navigation, consistent
 input helpers with validation, and EOF-safe loops (every menu/input loop unwinds cleanly
 on real `feof` instead of spinning) round it out.
+
+---
+
+## 12. Roadmap - planned extensions (designed, not yet built)
+
+These are the next architectural moves. They are **not implemented** - listed here so the
+design intent is on record. The current system stands on its own without them.
+
+### Company-scale unified scheduler (the v2 of §6)
+Today the scheduler is per-project and shared members are coupled only by a **coarse**
+cross-project floor (prefix serialization). The planned mode schedules **all projects as
+one unified project**: every task on a single absolute timeline (anchored at each
+project's `start_date`), the member pool as **one global resource set**, and CPM +
+greedy assignment + the overlap fixpoint run over the **union**. This makes cross-project
+conflict detection **exact and interval-aware** (a member busy in project A blocks them in
+B at the same absolute time; gaps become usable) - the single highest-value scheduling
+upgrade, subsuming the coarse calendar. Mechanically: resource (`work_pre`) edges now
+cross projects, so they key by `TaskRef(project_id, task_id)`; `find_best_member` reads a
+member's *global* load; `resolve_resource_overlaps` groups same-member tasks company-wide;
+the per-task `min_start` hack disappears. Per-project scheduling stays as an option; a
+company-menu "Schedule all" drives the unified pass. (Open: whether to allow cross-project
+*dependencies*, and whether project starts are fixed or slidable.)
+
+### Subcontractor / temp worker (extends §4)
+A **third staffing option** beyond on-roster assignment and "hire from company". A
+subcontractor is a **temporary, external** worker assigned **exclusively to one task** -
+brought in to cover a task the roster can't, does only that task, then leaves. Modeled as
+a `TeamMember` with an `is_temp` flag + a bound task: `find_best_member` never considers a
+temp for any other task, the bound task is pinned to them, and they carry no cross-project
+commitments (external -> floor 0). A natural hook for a future **cost/budget** field
+(external hire = money). Entry points: a third choice in the `resolve_unassigned` cascade
+and a sim "hire subcontractor" event.
+
+### Auto-split around a vacation (the `Subtask` layer, see §7)
+True preemption: when a member's task would straddle their vacation, split it at the block
+boundary into schedule-time-only **segments** (a lightweight `Subtask` list on the task),
+schedule the flattened leaf segments, then merge contiguous ones back. The same
+machinery, pointed at a member's *free gaps* instead of a vacation, generalizes to
+**time-shared assignees** (interleaving work into the gaps between commitments).

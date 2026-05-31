@@ -73,3 +73,16 @@ tables. Output is ASCII-only for portability. (The product is themed after *Figh
 - **Footprint**: ~20 translation units, fully dynamic memory (no fixed caps on
   companies / projects / tasks / members), a hand-rolled growable `DynamicIntArray`, and
   derived `id -> pointer` index tables for O(1) lookup on the read-heavy scheduling paths.
+
+## Roadmap (planned, not yet built)
+The scheduling core is designed to grow along one coherent arc:
+- **Company-scale unified scheduler** - plan all projects as a single combined project on
+  one shared timeline with the staff pool as one global resource set, turning today's
+  *coarse* cross-project resource awareness into an *exact, interval-aware* one.
+- **Subcontractor / temp worker** - bring in a temporary external worker assigned
+  exclusively to a single task (a hook for future cost/budget tracking).
+- **Auto-split around vacations** - true preemption: a task that hits a worker's vacation
+  splits around it and resumes after, generalizing to time-shared assignees.
+
+(These are recorded as design intent; see `ARCHITECTURE_AND_ALGORITHMS.md` §12 and
+`TODO_TO_100.md`.)
