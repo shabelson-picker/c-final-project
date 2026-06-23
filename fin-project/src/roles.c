@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <ctype.h>
+#include "util.h"
 #include "roles.h"
 
 /* Token <-> bit <-> display-name table. Order is irrelevant. */
@@ -66,7 +67,7 @@ int roles_load(const char *path, Role *roles, int max_roles) {
 
         if (strncmp(s, "role:", 5) == 0) {
             if (count >= max_roles) break;
-            strncpy(roles[count].name, trim(s + 5), sizeof roles[count].name - 1);
+            str_copy(roles[count].name, trim(s + 5), sizeof roles[count].name);
             roles[count].name[sizeof roles[count].name - 1] = '\0';
             roles[count].privs = 0;
             have_pending = 1;
@@ -88,7 +89,7 @@ static char     g_role_name[64] = "";
 
 void roles_set_current(const char *role_name, uint32_t privs) {
     g_privs = privs;
-    strncpy(g_role_name, role_name ? role_name : "", sizeof g_role_name - 1);
+    str_copy(g_role_name, role_name ? role_name : "", sizeof g_role_name);
     g_role_name[sizeof g_role_name - 1] = '\0';
 }
 

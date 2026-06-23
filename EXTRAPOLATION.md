@@ -26,6 +26,11 @@ an id-indexed lookup. ~6 focused test harnesses cover the scheduling invariants.
    Across projects, conflicts are handled only by the static floor computed once at
    assignment time. **Next:** a company-level scheduler that treats all members as one
    shared resource pool and resolves overlaps globally (this subsumes #1).
+   **Entry point:** add a "Schedule all / Company plan" action to the all-projects
+   (portfolio) view that runs this unified scheduler over the union of every project on
+   one absolute timeline - shared member pool as one global resource set, CPM + greedy
+   assignment + the overlap fixpoint over the union. The all-task company Gantt becomes
+   its primary output. Keep per-project scheduling as a separate option.
 
 3. **No true preemption.** Splitting is manual and dependency-based. **Next:**
    auto-split a task that would straddle a vacation (split at the block boundary and
@@ -50,6 +55,22 @@ an id-indexed lookup. ~6 focused test harnesses cover the scheduling invariants.
 8. **No role-management UI.** roles.cfg lists an `ADMIN` "manage roles" privilege but
    there is no editor; roles are read-only at startup. **Next:** an admin screen to
    add/edit roles and write roles.cfg back.
+
+9. **Idle gaps from cross-project waits are invisible on the Gantt - they read like a
+   bug.** When a shared member is busy in another project, a task's start is pushed past
+   its dependency-ready day (via the `min_start` floor), leaving a blank stretch before
+   the bar that looks like empty space rather than a resource wait. *Observed:* Apollo
+   `Requirements` ends day 41 but `User Research` does not start until day 103 - David
+   Kim (member 6) is tied up in proj_1 until then. The schedule is correct; only its
+   *legibility* is the problem. **Next - add visibility to the Gantt:**
+   - draw the wait explicitly: a dim lead-in (e.g. `····`) from the dependency-ready day
+     to the actual start, so the gap is clearly "waiting", not "nothing";
+   - flag tasks whose `min_start` beat their dependency floor with a `[resource wait]`
+     marker / distinct colour, and a one-line "blocked by <member> busy in <project>
+     until day N" annotation.
+   Turns a confusing hole into an explained, executive-readable signal - and motivates
+   the interval-aware calendar in #1 / the global scheduler in #2 (which would shrink
+   the gaps by interleaving instead of serializing).
 
 ## Architecture evolution
 - Promote the throwaway `tests/` harnesses into a committed unit-test suite with a

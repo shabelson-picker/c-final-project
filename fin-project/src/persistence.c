@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <direct.h>
 #include <io.h>
+#include "util.h"
 #include "persistence.h"
 
 /* =========================================================================
@@ -53,7 +54,7 @@ static int split_kv(const char* line, char* key, int kmax, char* val, int vmax) 
 	strncpy(key, line, klen); key[klen] = '\0';
 	vstart = colon + 1;
 	while (*vstart == ' ') vstart++;
-	strncpy(val, vstart, vmax - 1); val[vmax - 1] = '\0';
+	str_copy(val, vstart, vmax);
 	{
 		int vlen = (int)strlen(val);
 		while (vlen > 0 && (val[vlen - 1] == '\n' || val[vlen - 1] == '\r')) val[--vlen] = '\0';
@@ -67,7 +68,7 @@ static void unquote(const char* src, char* dst, int max) {
 		len -= 2; if (len >= max) len = max - 1;
 		strncpy(dst, src + 1, len); dst[len] = '\0';
 	}
-	else { strncpy(dst, src, max - 1); dst[max - 1] = '\0'; }
+	else { str_copy(dst, src, max); }
 }
 
 static int parse_int_array(const char* val, int* arr, int max) {
@@ -163,15 +164,17 @@ static void parse_meta(const char* key, const char* val,
 static void parse_task(Project* p, Task* t, const char* key, const char* val) {
 	char str[MAX_DESC_LEN]; int ids[64]; int n;
 	if (strcmp(key, "id") == 0) t->id = (int)strtol(val, NULL, 10);
-	else if (strcmp(key, "title") == 0) { unquote(val, str, MAX_TITLE_LEN); strncpy(t->title, str, MAX_TITLE_LEN - 1); }
-	else if (strcmp(key, "description") == 0) { unquote(val, str, MAX_DESC_LEN);  strncpy(t->description, str, MAX_DESC_LEN - 1); }
-	else if (strcmp(key, "status") == 0) t->status = (TaskStatus)strtol(val, NULL, 10);
+	else if (strcmp(key, "title") == 0) { unquote(val, str, MAX_TITLE_LEN); str_copy(t->title, str, MAX_TITLE_LEN); }
+	else if (strcmp(key, "description") == 0) { unquote(val, str, MAX_DESC_LEN);  str_copy(t->description, str, MAX_DESC_LEN); }
+	else if (strcmp(key, "status") == 0) task_set_status(t, (TaskStatus)strtol(val, NULL, 10));
 	else if (strcmp(key, "pert_min") == 0) t->pert_min = strtof(val, NULL);
 	else if (strcmp(key, "pert_likely") == 0) t->pert_likely = strtof(val, NULL);
 	else if (strcmp(key, "pert_max") == 0) { t->pert_max = strtof(val, NULL); task_set_pert(t, t->pert_min, t->pert_likely, t->pert_max); }
 	else if (strcmp(key, "risk") == 0) task_set_risk(t, strtof(val, NULL));
-	else if (strcmp(key, "required_skills") == 0) t->required_skills = (uint32_t)strtol(val, NULL, 10);
-	else if (strcmp(key, "assignee_id") == 0) t->assignee_id = (int)strtol(val, NULL, 10);
+	else if (strcmp(key, "required_skills") == 0) task_set_skills(t, (uint32_t)strtol(val, NULL, 10));
+	else if (strcmp(key, "assignee_id") == 0) task_set_assignee(t, (int)strtol(val, NULL, 10));
+	/* raw flag restore: deserialisation reconstructs the persisted value directly
+	   (the pin/clear setters bundle assignee semantics that don't fit a field load) */
 	else if (strcmp(key, "manually_assigned") == 0) t->manually_assigned = (int)strtol(val, NULL, 10);
 	else if (strcmp(key, "fixed_time") == 0) t->fixed_time = (int)strtol(val, NULL, 10);
 	else if (strcmp(key, "milestone_id") == 0) t->milestone_id = (int)strtol(val, NULL, 10);
@@ -188,7 +191,7 @@ static void parse_task(Project* p, Task* t, const char* key, const char* val) {
 static void parse_milestone(Project* p, Milestone* m, const char* key, const char* val) {
 	char str[MAX_NAME_LEN]; int ids[64]; int n, j;
 	if (strcmp(key, "id") == 0) m->id = (int)strtol(val, NULL, 10);
-	else if (strcmp(key, "name") == 0) { unquote(val, str, MAX_NAME_LEN); strncpy(m->name, str, MAX_NAME_LEN - 1); }
+	else if (strcmp(key, "name") == 0) { unquote(val, str, MAX_NAME_LEN); str_copy(m->name, str, MAX_NAME_LEN); }
 	else if (strcmp(key, "deadline_day") == 0) m->deadline_day = (int)strtol(val, NULL, 10);
 	else if (strcmp(key, "priority") == 0) m->priority = (int)strtol(val, NULL, 10);
 	else if (strcmp(key, "tasks") == 0) { n = parse_int_array(val, ids, 64); for (j = 0;j < n;j++) project_link_task_milestone(p, ids[j], m->id); }
@@ -255,7 +258,7 @@ Project* project_load(const char* dir) {
 				dia_sort_insert(&p->member_ids, member_ids_buf[j]);
 	}
 
-	strncpy(p->save_dir, dir, sizeof(p->save_dir) - 1);
+	str_copy(p->save_dir, dir, sizeof(p->save_dir));
 	return p;
 }
 
@@ -345,7 +348,7 @@ Company* company_load(const char* dir) {
 
 	c = company_create(name);
 	if (!c) return NULL;
-	strncpy(c->save_dir, dir, sizeof(c->save_dir) - 1);
+	str_copy(c->save_dir, dir, sizeof(c->save_dir));
 
 	/* team.yaml */
 	snprintf(path, MAX_PATH_LEN, "%s\\team.yaml", dir);
@@ -360,9 +363,9 @@ Company* company_load(const char* dir) {
 			{
 				char str[MAX_NAME_LEN];
 				if (strcmp(key, "id") == 0) cur_mb->id = (int)strtol(val, NULL, 10);
-				else if (strcmp(key, "name") == 0) { unquote(val, str, MAX_NAME_LEN); strncpy(cur_mb->name, str, MAX_NAME_LEN - 1); }
-				else if (strcmp(key, "role") == 0) { unquote(val, str, MAX_NAME_LEN); strncpy(cur_mb->role, str, MAX_NAME_LEN - 1); }
-				else if (strcmp(key, "skills") == 0) cur_mb->skills = (uint32_t)strtol(val, NULL, 10);
+				else if (strcmp(key, "name") == 0) { unquote(val, str, MAX_NAME_LEN); str_copy(cur_mb->name, str, MAX_NAME_LEN); }
+				else if (strcmp(key, "role") == 0) { unquote(val, str, MAX_NAME_LEN); str_copy(cur_mb->role, str, MAX_NAME_LEN); }
+				else if (strcmp(key, "skills") == 0) team_member_set_skills(cur_mb, (uint32_t)strtol(val, NULL, 10));
 				else if (strcmp(key, "availability") == 0) cur_mb->availability = strtof(val, NULL);
 				else if (strcmp(key, "project_ids") == 0) {
 					int ids[64]; int n = parse_int_array(val, ids, 64); int j;

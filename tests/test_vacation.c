@@ -24,7 +24,7 @@ int main(void) {
     TeamMember *carol = company_add_member(c, "Carol", "Engineer");
     Project *p1, *p2;
     Task *big, *vac1, *small, *vac2;
-    team_member_add_skill(carol, SKILL_BACKEND);
+    team_member_set_skills(carol, SKILL_BACKEND);
 
     printf("Vacations as immovable blocks\n");
 
@@ -49,7 +49,7 @@ int main(void) {
     {
         Company *c2 = company_create("VacTest2");
         TeamMember *dave = company_add_member(c2, "Dave", "Engineer");
-        team_member_add_skill(dave, SKILL_BACKEND);
+        team_member_set_skills(dave, SKILL_BACKEND);
         p2    = company_add_project(c2, "Fits", mkdate(2026, 1, 1));
         small = project_add_task(p2, "Small", ""); task_set_pert(small, 2,2,2); task_set_skills(small, SKILL_BACKEND);
         vac2  = project_add_fixed_block(p2, "[Vacation] Dave", dave->id, 3, 4);  /* 3..7 */

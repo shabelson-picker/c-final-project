@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util.h"
 #include "task.h"
 #include "dynamic_int_array.h"
 
@@ -25,8 +26,8 @@ Task *task_create(int id, const char *title, const char *description) {
     t->sched_end   = -1;
     t->latest_start = -1;
 
-    strncpy(t->title,       title,       MAX_TITLE_LEN - 1);
-    strncpy(t->description, description, MAX_DESC_LEN  - 1);
+    str_copy(t->title,       title,       MAX_TITLE_LEN);
+    str_copy(t->description, description, MAX_DESC_LEN );
 
     return t;
 }
@@ -57,7 +58,25 @@ void task_set_risk(Task *t, float risk) {
 }
 
 void task_set_skills(Task *t, uint32_t skills) {
-    t->required_skills = skills;
+    t->required_skills = skills & SKILL_ALL_MASK;   /* drop any undefined bits */
+}
+
+void task_set_status(Task *t, TaskStatus status) {
+    t->status = status;
+}
+
+void task_set_assignee(Task *t, int member_id) {
+    t->assignee_id = member_id;      /* auto-assignment: leaves the pin flag as-is */
+}
+
+void task_pin_assignee(Task *t, int member_id) {
+    t->assignee_id       = member_id;
+    t->manually_assigned = 1;        /* pinned: the scheduler keeps this owner */
+}
+
+void task_clear_assignment(Task *t) {
+    t->assignee_id       = -1;
+    t->manually_assigned = 0;
 }
 
 int task_add_pre(Task *t, int pre_id) {
@@ -78,10 +97,6 @@ int task_remove_pre(Task *t, int pre_id) {
 
 int task_remove_post(Task *t, int post_id) {
     return dia_remove(&t->post_ids, post_id);
-}
-
-int task_can_be_done_by(const Task *t, uint32_t member_skills) {
-    return (member_skills & t->required_skills) == t->required_skills;
 }
 
 void task_print(const Task *t) {

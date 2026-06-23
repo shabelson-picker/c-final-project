@@ -41,6 +41,12 @@ int        milestone_add_task(Milestone *m, int task_id);
 /// <returns>1 if removed, 0 if not present.</returns>
 int        milestone_remove_task(Milestone *m, int task_id);
 
+/// <summary>Test whether a task ID is attached to the milestone.</summary>
+/// <param name="m">Milestone.</param>
+/// <param name="task_id">Task ID to look for.</param>
+/// <returns>1 if attached, 0 otherwise.</returns>
+int        milestone_has_task(const Milestone *m, int task_id);
+
 /// <summary>Print a one-line summary of the milestone to stdout.</summary>
 /// <param name="m">Milestone to print.</param>
 void       milestone_print(const Milestone *m);

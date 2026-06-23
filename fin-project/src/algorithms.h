@@ -22,10 +22,9 @@ typedef enum {
     ASSIGN_BEST_FIT
 } AssignPolicy;
 
-/* Set / get the policy used by the next assign_members_greedy run.
- * Module-level so callers need not thread it through every layer. */
+/* Set the policy used by the next assign_members_greedy run. Module-level so
+ * callers need not thread it through every layer. */
 void          assign_set_policy(AssignPolicy policy);
-AssignPolicy  assign_get_policy(void);
 
 /* ---- CPM scheduling pipeline -------------------------------------------- */
 

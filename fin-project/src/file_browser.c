@@ -4,6 +4,7 @@
 #include <io.h>
 #include <direct.h>
 #include <windows.h>
+#include "util.h"
 #include "file_browser.h"
 #include "constants.h"
 #include "ui.h"
@@ -45,7 +46,7 @@ static int load_entries(FileEntry *entries, int max) {
     do {
         if (strcmp(fd.name, ".") == 0) continue;
         if (count >= max) break;
-        strncpy(entries[count].name, fd.name, MAX_PATH_LEN - 1);
+        str_copy(entries[count].name, fd.name, MAX_PATH_LEN);
         entries[count].name[MAX_PATH_LEN - 1] = '\0';
         entries[count].is_dir = (fd.attrib & _A_SUBDIR) ? 1 : 0;
         count++;
@@ -107,7 +108,7 @@ static int browser_loop(char *out_path, int max_len, BrowserMode mode) {
         if (choice == 0) { _chdir(original_cwd); free(entries); return 0; }
 
         if (choice == -2 && mode == MODE_DIR) {
-            strncpy(out_path, cwd, max_len - 1);
+            str_copy(out_path, cwd, max_len);
             out_path[max_len - 1] = '\0';
             _chdir(original_cwd);
             free(entries);

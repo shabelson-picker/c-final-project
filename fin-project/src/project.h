@@ -119,7 +119,15 @@ int        project_link_tasks(Project *p, int pre_id, int post_id);
 /// <param name="task_id">Task ID.</param>
 /// <param name="milestone_id">Milestone ID.</param>
 /// <returns>1 on success, 0 if either was not found.</returns>
+/// <remarks>A task may feed several milestones; membership is recorded on each milestone's task list.</remarks>
 int        project_link_task_milestone(Project *p, int task_id, int milestone_id);
+
+/// <summary>Detach a task from a milestone (no-op if not attached to it).</summary>
+/// <param name="p">Project.</param>
+/// <param name="task_id">Task ID.</param>
+/// <param name="milestone_id">Milestone ID.</param>
+/// <returns>1 if the task was removed from the milestone, 0 otherwise.</returns>
+int        project_unlink_task_milestone(Project *p, int task_id, int milestone_id);
 
 /* A milestone's health against its deadline_day. */
 typedef enum {
@@ -149,10 +157,6 @@ const char     *milestone_status_label(MilestoneStatus s);
 /// <param name="first_fraction">Share of the duration kept by part 1 (clamped to [0.1, 0.9]).</param>
 /// <returns>The new "part 2" task, or NULL on failure / invalid target.</returns>
 Task      *project_split_task(Project *p, int task_id, float first_fraction);
-
-/// <summary>Print a full text summary of the project (tasks + milestones) to stdout.</summary>
-/// <param name="p">Project.</param>
-void       project_print_summary(const Project *p);
 
 /// <summary>Check (via DFS) whether adding pre_id -> post_id would introduce a cycle; prints the cycle if so.</summary>
 /// <param name="p">Project.</param>

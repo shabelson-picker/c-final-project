@@ -130,7 +130,6 @@
   <ItemGroup>
     <ClCompile Include="src\company.c" />
     <ClCompile Include="src\dynamic_int_array.c" />
-    <ClCompile Include="src\task_ref_array.c" />
     <ClCompile Include="src\main.c" />
     <ClCompile Include="src\task.c" />
     <ClCompile Include="src\milestone.c" />
@@ -147,11 +146,12 @@
     <ClCompile Include="src\dot_export.c" />
     <ClCompile Include="src\report_exporter.c" />
     <ClCompile Include="src\ui.c" />
+    <ClCompile Include="src\util.c" />
+    <ClCompile Include="src\tui_framework.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\company.h" />
     <ClInclude Include="src\dynamic_int_array.h" />
-    <ClInclude Include="src\task_ref_array.h" />
     <ClInclude Include="src\constants.h" />
     <ClInclude Include="src\types.h" />
     <ClInclude Include="src\task.h" />
@@ -169,6 +169,8 @@
     <ClInclude Include="src\dot_export.h" />
     <ClInclude Include="src\report_exporter.h" />
     <ClInclude Include="src\ui.h" />
+    <ClInclude Include="src\util.h" />
+    <ClInclude Include="src\tui_framework.h" />
   </ItemGroup>
   <ItemGroup>
     <!-- Ship roles.cfg next to the .exe so the runtime get_exe_dir() lookup

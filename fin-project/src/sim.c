@@ -1,8 +1,12 @@
 #include <stdio.h>
 #include <string.h>
+#include <io.h>
+#include <direct.h>
+#include "util.h"
 #include "sim.h"
 #include "algorithms.h"
 #include "persistence.h"
+#include "tui_framework.h"
 #include "menus.h"
 #include "ui.h"
 #include "constants.h"
@@ -16,10 +20,10 @@ int sim_advance_day(Project *p, int day) {
         if (t->status == STATUS_DONE || t->status == STATUS_CANCELLED) continue;
         if (t->fixed_time) continue;                 /* vacations are not "work" */
         if (t->assignee_id != -1 && t->sched_end <= day) {
-            t->status = STATUS_DONE;
+            task_set_status(t, STATUS_DONE);
             done++;
         } else if (t->assignee_id != -1 && t->sched_start <= day && day < t->sched_end) {
-            t->status = STATUS_IN_PROGRESS;
+            task_set_status(t, STATUS_IN_PROGRESS);
         }
     }
     return done;
@@ -27,21 +31,40 @@ int sim_advance_day(Project *p, int day) {
 
 /* ---- sandbox clone ------------------------------------------------------ */
 
+/* Recursively delete a directory bundle (files + subdirectories). Used to clean
+ * up the sandbox temp bundle when the simulation ends. Best-effort - any error
+ * (e.g. a file held open) is ignored. */
+static void remove_dir_recursive(const char *dir) {
+    struct _finddata_t fd;
+    intptr_t h;
+    char search[MAX_PATH_LEN], child[MAX_PATH_LEN];
+
+    snprintf(search, sizeof search, "%s\\*", dir);
+    h = _findfirst(search, &fd);
+    if (h != -1) {
+        do {
+            if (strcmp(fd.name, ".") == 0 || strcmp(fd.name, "..") == 0) continue;
+            snprintf(child, sizeof child, "%s\\%s", dir, fd.name);
+            if (fd.attrib & _A_SUBDIR) remove_dir_recursive(child);
+            else                       remove(child);
+        } while (_findnext(h, &fd) == 0);
+        _findclose(h);
+    }
+    _rmdir(dir);
+}
+
 /* Clone the company by round-tripping through a temp bundle. The returned copy
  * is fully independent; its save_dir points at the temp dir. Returns NULL on
  * failure. On success, *out_tmp receives the temp path. */
 static Company *clone_company(Company *c, char *out_tmp, int tmp_sz) {
     char orig[MAX_PATH_LEN];
     Company *sim;
-    strncpy(orig, c->save_dir, sizeof orig - 1);
-    orig[sizeof orig - 1] = '\0';
+    str_copy(orig, c->save_dir, sizeof orig);
     snprintf(out_tmp, tmp_sz, "%s_sandbox", orig);
 
-    strncpy(c->save_dir, out_tmp, MAX_PATH_LEN - 1);   /* temporarily retarget */
-    c->save_dir[MAX_PATH_LEN - 1] = '\0';
+    str_copy(c->save_dir, out_tmp, MAX_PATH_LEN);   /* temporarily retarget */
     company_save(c);
-    strncpy(c->save_dir, orig, MAX_PATH_LEN - 1);       /* restore real path */
-    c->save_dir[MAX_PATH_LEN - 1] = '\0';
+    str_copy(c->save_dir, orig, MAX_PATH_LEN);       /* restore real path */
 
     sim = company_load(out_tmp);
     return sim;
@@ -91,7 +114,7 @@ static void replan(Company *sim, int idx) {
 static void set_status_by_id(Project *p, int id, TaskStatus s) {
     Task *t = project_find_task(p, id);
     if (!t) { cprintf(C_RED, "  No task [%d].\n", id); return; }
-    t->status = s;
+    task_set_status(t, s);
     cprintf(C_GREEN, "  Task [%d] '%s' -> %s\n", id, t->title,
             s == STATUS_DONE ? "DONE" : s == STATUS_CANCELLED ? "CANCELLED" : "updated");
 }
@@ -119,8 +142,7 @@ static void event_quit(Company *sim, int idx) {
     if (!m) { cprintf(C_RED, "  No such member.\n"); return; }
     for (i = 0; i < p->task_count; i++)
         if (p->tasks[i]->assignee_id == mid) {
-            p->tasks[i]->assignee_id = -1;
-            p->tasks[i]->manually_assigned = 0;
+            task_clear_assignment(p->tasks[i]);
             freed++;
         }
     dia_sort_remove(&p->member_ids, mid);     /* off this project's roster */
@@ -138,7 +160,7 @@ static void event_hire(Company *sim, int idx) {
     if (read_int("  Skills bitmask: ", &skills) != 1 || skills < 0) return;
     m = company_add_member(sim, name, "New Hire");
     if (!m) { cprintf(C_RED, "  Could not hire.\n"); return; }
-    m->skills = (uint32_t)skills;
+    team_member_set_skills(m, (uint32_t)skills);
     company_assign_member(sim, idx, m->id, -1);   /* onto the roster */
     cprintf(C_GREEN, "  Hired %s [id %d]; re-planning...\n", name, m->id);
     replan(sim, idx);
@@ -153,12 +175,20 @@ void menu_simulate(Company *c, int project_idx) {
     int day = 0, choice, running = 1;
 
     if (project_idx < 0 || project_idx >= c->project_count) return;
-    strncpy(orig, c->save_dir, sizeof orig - 1);
-    orig[sizeof orig - 1] = '\0';
+    str_copy(orig, c->save_dir, sizeof orig);
 
     sim = clone_company(c, tmp, sizeof tmp);
-    if (!sim) { cprintf(C_RED, "  Could not start sandbox.\n"); screen_pause(); return; }
-    if (project_idx >= sim->project_count) { company_destroy(sim); return; }
+    if (!sim) {
+        cprintf(C_RED, "  Could not start sandbox.\n");
+        remove_dir_recursive(tmp);
+        screen_pause();
+        return;
+    }
+    if (project_idx >= sim->project_count) {
+        company_destroy(sim);
+        remove_dir_recursive(tmp);
+        return;
+    }
     p = sim->projects[project_idx];
     replan(sim, project_idx);
 
@@ -184,8 +214,7 @@ void menu_simulate(Company *c, int project_idx) {
             case 6: event_hire(sim, project_idx);     screen_pause(); break;
             case 7: replan(sim, project_idx); cprintf(C_GREEN, "  Re-planned.\n"); screen_pause(); break;
             case 8:
-                strncpy(sim->save_dir, orig, MAX_PATH_LEN - 1);
-                sim->save_dir[MAX_PATH_LEN - 1] = '\0';
+                str_copy(sim->save_dir, orig, MAX_PATH_LEN);
                 if (company_save(sim)) cprintf(C_GREEN, "  Sandbox applied to the real project.\n");
                 else                   cprintf(C_RED,   "  Apply failed.\n");
                 screen_pause();
@@ -195,5 +224,6 @@ void menu_simulate(Company *c, int project_idx) {
     }
     crumb_pop();
     company_destroy(sim);
+    remove_dir_recursive(tmp);   /* clean up the sandbox temp bundle */
     cprintf(C_DIM, "  Left the sandbox.\n");
 }

@@ -14,15 +14,14 @@ int dot_write(const Project *p, const char *filename) {
     fprintf(f, "  node [fontname=\"Helvetica\" fontsize=11];\n");
     fprintf(f, "  edge [color=\"#555555\"];\n\n");
 
-    /* START / END sentinels */
-    fprintf(f, "  %d [label=\"START\" shape=circle style=filled fillcolor=\"#4CAF50\" fontcolor=white];\n", START_NODE_ID);
-    fprintf(f, "  end  [label=\"END\"   shape=circle style=filled fillcolor=\"#607D8B\" fontcolor=white];\n\n");
+    /* Sentinels (START/END) are internal scheduling anchors, not real tasks, so
+     * they are omitted - roots simply have no incoming edge, leaves none out.
+     * This matches the console DAG view (render_dag), which also hides them. */
 
     /* Task nodes */
     for (i = 0; i < p->task_count; i++) {
         Task *t = p->tasks[i];
-        const char *fill  = t->is_critical ? "#F44336" : "#2196F3";
-        const char *slack = t->slack >= 0   ? "" : "";
+        const char *fill = t->is_critical ? "#F44336" : "#2196F3";
 
         fprintf(f, "  %d [label=\"[%d] %s\\nexp: %.1fd | risk: %.0f/10",
                 t->id, t->id, t->title, t->pert_expected, t->risk * 10.0f);
@@ -32,15 +31,10 @@ int dot_write(const Project *p, const char *filename) {
                     t->sched_start, t->sched_end, t->slack);
 
         fprintf(f, "\" style=filled fillcolor=\"%s\" fontcolor=white];\n", fill);
-        (void)slack;
     }
     fprintf(f, "\n");
 
-    /* Edges from START to root tasks */
-    for (i = 0; i < p->start_node->post_ids.count; i++)
-        fprintf(f, "  %d -> %d;\n", START_NODE_ID, p->start_node->post_ids.data[i]);
-
-    /* Edges between user tasks */
+    /* Edges between user tasks (END sentinel skipped) */
     for (i = 0; i < p->task_count; i++) {
         Task *t = p->tasks[i];
         for (j = 0; j < t->post_ids.count; j++) {
@@ -48,10 +42,6 @@ int dot_write(const Project *p, const char *filename) {
             fprintf(f, "  %d -> %d;\n", t->id, t->post_ids.data[j]);
         }
     }
-
-    /* Edges to END from leaf tasks */
-    for (i = 0; i < p->end_node->pre_ids.count; i++)
-        fprintf(f, "  %d -> end;\n", p->end_node->pre_ids.data[i]);
 
     /* Alt edges (plan B) - dashed */
     for (i = 0; i < p->task_count; i++) {

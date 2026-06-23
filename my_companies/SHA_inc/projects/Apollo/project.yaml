@@ -22,7 +22,7 @@ tasks:
     milestone_id: -1
     sched_start: 38
     sched_end: 41
-    slack: 69
+    slack: 92
     is_critical: 0
     topo_order: 1
     pre: []
@@ -39,13 +39,13 @@ tasks:
     pert_max: 4.0000
     risk: 0.1000
     required_skills: 64
-    assignee_id: 6
+    assignee_id: 10
     manually_assigned: 0
     fixed_time: 0
     milestone_id: -1
-    sched_start: 41
-    sched_end: 43
-    slack: 69
+    sched_start: 103
+    sched_end: 105
+    slack: 30
     is_critical: 0
     topo_order: 2
     pre: [17]
@@ -66,9 +66,9 @@ tasks:
     manually_assigned: 0
     fixed_time: 0
     milestone_id: -1
-    sched_start: 43
-    sched_end: 46
-    slack: 69
+    sched_start: 105
+    sched_end: 108
+    slack: 30
     is_critical: 0
     topo_order: 3
     pre: [18]
@@ -85,13 +85,13 @@ tasks:
     pert_max: 7.0000
     risk: 0.2000
     required_skills: 64
-    assignee_id: 6
+    assignee_id: 10
     manually_assigned: 0
     fixed_time: 0
     milestone_id: 4
-    sched_start: 46
-    sched_end: 50
-    slack: 69
+    sched_start: 108
+    sched_end: 113
+    slack: 30
     is_critical: 0
     topo_order: 4
     pre: [19]
@@ -108,19 +108,19 @@ tasks:
     pert_max: 5.0000
     risk: 0.3000
     required_skills: 2
-    assignee_id: 3
+    assignee_id: 7
     manually_assigned: 0
     fixed_time: 0
     milestone_id: -1
-    sched_start: 53
-    sched_end: 56
-    slack: 69
+    sched_start: 113
+    sched_end: 117
+    slack: 30
     is_critical: 0
-    topo_order: 7
+    topo_order: 5
     pre: [20]
     post: [22]
     alt: []
-    work_pre: [24]
+    work_pre: []
   -
     id: 22
     title: "Auth Service"
@@ -131,15 +131,15 @@ tasks:
     pert_max: 8.0000
     risk: 0.4000
     required_skills: 2
-    assignee_id: 3
+    assignee_id: 5
     manually_assigned: 0
     fixed_time: 0
     milestone_id: -1
-    sched_start: 56
-    sched_end: 61
-    slack: 69
-    is_critical: 0
-    topo_order: 9
+    sched_start: 147
+    sched_end: 153
+    slack: 0
+    is_critical: 1
+    topo_order: 7
     pre: [21]
     post: [23]
     alt: []
@@ -154,15 +154,15 @@ tasks:
     pert_max: 11.0000
     risk: 0.4000
     required_skills: 2
-    assignee_id: 3
+    assignee_id: 7
     manually_assigned: 0
     fixed_time: 0
     milestone_id: -1
-    sched_start: 61
-    sched_end: 68
-    slack: 69
-    is_critical: 0
-    topo_order: 10
+    sched_start: 153
+    sched_end: 162
+    slack: 0
+    is_critical: 1
+    topo_order: 9
     pre: [22]
     post: [27]
     alt: []
@@ -181,11 +181,11 @@ tasks:
     manually_assigned: 0
     fixed_time: 0
     milestone_id: -1
-    sched_start: 50
-    sched_end: 53
-    slack: 69
+    sched_start: 113
+    sched_end: 116
+    slack: 34
     is_critical: 0
-    topo_order: 5
+    topo_order: 6
     pre: [20]
     post: [25]
     alt: []
@@ -200,15 +200,15 @@ tasks:
     pert_max: 6.0000
     risk: 0.3000
     required_skills: 1
-    assignee_id: 6
+    assignee_id: 8
     manually_assigned: 0
     fixed_time: 0
     milestone_id: -1
-    sched_start: 53
-    sched_end: 57
-    slack: 74
+    sched_start: 135
+    sched_end: 140
+    slack: 15
     is_critical: 0
-    topo_order: 6
+    topo_order: 8
     pre: [24]
     post: [26]
     alt: []
@@ -223,15 +223,15 @@ tasks:
     pert_max: 9.0000
     risk: 0.3000
     required_skills: 1
-    assignee_id: 6
+    assignee_id: 3
     manually_assigned: 0
     fixed_time: 0
     milestone_id: -1
-    sched_start: 57
-    sched_end: 63
-    slack: 74
+    sched_start: 140
+    sched_end: 147
+    slack: 15
     is_critical: 0
-    topo_order: 8
+    topo_order: 10
     pre: [25]
     post: [27]
     alt: []
@@ -246,14 +246,14 @@ tasks:
     pert_max: 5.0000
     risk: 0.4000
     required_skills: 2
-    assignee_id: 3
+    assignee_id: 8
     manually_assigned: 0
     fixed_time: 0
     milestone_id: -1
-    sched_start: 68
-    sched_end: 71
-    slack: 69
-    is_critical: 0
+    sched_start: 162
+    sched_end: 166
+    slack: 0
+    is_critical: 1
     topo_order: 11
     pre: [23, 26]
     post: [28, 30]
@@ -269,14 +269,14 @@ tasks:
     pert_max: 6.0000
     risk: 0.3000
     required_skills: 16
-    assignee_id: 7
+    assignee_id: 2
     manually_assigned: 0
     fixed_time: 0
     milestone_id: 5
-    sched_start: 71
-    sched_end: 75
-    slack: 69
-    is_critical: 0
+    sched_start: 166
+    sched_end: 171
+    slack: 0
+    is_critical: 1
     topo_order: 12
     pre: [27]
     post: [29]
@@ -292,14 +292,14 @@ tasks:
     pert_max: 5.0000
     risk: 0.3000
     required_skills: 16
-    assignee_id: 7
+    assignee_id: 2
     manually_assigned: 0
     fixed_time: 0
     milestone_id: -1
-    sched_start: 75
-    sched_end: 78
-    slack: 69
-    is_critical: 0
+    sched_start: 171
+    sched_end: 175
+    slack: 0
+    is_critical: 1
     topo_order: 14
     pre: [28]
     post: [31]
@@ -319,10 +319,10 @@ tasks:
     manually_assigned: 0
     fixed_time: 0
     milestone_id: -1
-    sched_start: 147
-    sched_end: 150
-    slack: 0
-    is_critical: 1
+    sched_start: 166
+    sched_end: 170
+    slack: 9
+    is_critical: 0
     topo_order: 13
     pre: [27]
     post: [32]
@@ -338,14 +338,14 @@ tasks:
     pert_max: 6.0000
     risk: 0.5000
     required_skills: 2
-    assignee_id: 3
+    assignee_id: 10
     manually_assigned: 0
     fixed_time: 0
     milestone_id: -1
-    sched_start: 78
-    sched_end: 81
-    slack: 69
-    is_critical: 0
+    sched_start: 175
+    sched_end: 179
+    slack: 0
+    is_critical: 1
     topo_order: 15
     pre: [29]
     post: [32]
@@ -365,8 +365,8 @@ tasks:
     manually_assigned: 0
     fixed_time: 0
     milestone_id: 6
-    sched_start: 150
-    sched_end: 152
+    sched_start: 179
+    sched_end: 182
     slack: 0
     is_critical: 1
     topo_order: 16

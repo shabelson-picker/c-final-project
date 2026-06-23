@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include "util.h"
 #include "report_exporter.h"
 #include "renderer.h"
 #include "dot_export.h"
@@ -177,7 +178,7 @@ static void write_dag_section(FILE *f, const Project *p, const char *report_path
     fprintf(f, "<h2>Dependency Graph</h2>\n");
 
     /* sibling paths <base>.dot / <base>.svg derived from <base>.html */
-    strncpy(base, report_path, sizeof(base) - 1);
+    str_copy(base, report_path, sizeof(base));
     base[sizeof(base) - 1] = '\0';
     ext = strrchr(base, '.');
     if (ext) *ext = '\0';

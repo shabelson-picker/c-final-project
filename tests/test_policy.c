@@ -41,13 +41,10 @@ int main(void) {
     Task *t1, *t2;
 
     spec = company_add_member(c, "Spec", "Engineer");
-    team_member_add_skill(spec, SKILL_BACKEND);
+    team_member_set_skills(spec, SKILL_BACKEND);
 
     gen = company_add_member(c, "Gen", "Lead");
-    team_member_add_skill(gen, SKILL_BACKEND);
-    team_member_add_skill(gen, SKILL_FRONTEND);
-    team_member_add_skill(gen, SKILL_QA);
-    team_member_add_skill(gen, SKILL_DEVOPS);   /* surplus 3 for a backend task */
+    team_member_set_skills(gen, SKILL_BACKEND | SKILL_FRONTEND | SKILL_QA | SKILL_DEVOPS);   /* surplus 3 for a backend task */
 
     p  = company_add_project(c, "Solo", mkdate(2026, 1, 1));
     t1 = project_add_task(p, "T1", ""); task_set_pert(t1, 5,5,5); task_set_skills(t1, SKILL_BACKEND);

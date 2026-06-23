@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util.h"
 #include "milestone.h"
 
 Milestone *milestone_create(int id, const char *name, int deadline_day, int priority) {
@@ -11,7 +12,7 @@ Milestone *milestone_create(int id, const char *name, int deadline_day, int prio
     m->id           = id;
     m->deadline_day = deadline_day;
     m->priority     = priority;
-    strncpy(m->name, name, MAX_NAME_LEN - 1);
+    str_copy(m->name, name, MAX_NAME_LEN);
 
     return m;
 }
@@ -23,11 +24,20 @@ void milestone_destroy(Milestone *m) {
 }
 
 int milestone_add_task(Milestone *m, int task_id) {
-    int *tmp = (int *)realloc(m->task_ids, (m->task_count + 1) * sizeof(int));
+    int *tmp;
+    if (milestone_has_task(m, task_id)) return 1;   /* already attached - idempotent */
+    tmp = (int *)realloc(m->task_ids, (m->task_count + 1) * sizeof(int));
     if (!tmp) return 0;
     m->task_ids = tmp;
     m->task_ids[m->task_count++] = task_id;
     return 1;
+}
+
+int milestone_has_task(const Milestone *m, int task_id) {
+    int i;
+    for (i = 0; i < m->task_count; i++)
+        if (m->task_ids[i] == task_id) return 1;
+    return 0;
 }
 
 int milestone_remove_task(Milestone *m, int task_id) {

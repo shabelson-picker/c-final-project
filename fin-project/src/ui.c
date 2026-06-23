@@ -12,6 +12,34 @@ void screen_pause(void) {
     while ((c = getchar()) != '\n' && c != EOF) {}
 }
 
+/* On-theme ASCII banner (ASCII-only - no backslashes/Unicode, avoids MSVC C4819).
+ * The bottom strip is a mini Gantt motif: solid / expected / overrun zones. */
+void print_banner(void) {
+    cprintf(C_BOLD C_CYAN,
+        "\n"
+        "   ____  ____  ____  _ ____ ____ ___    __  __  ____ \n"
+        "  |  _ \\|  _ \\|  _ \\| | ___|  __|_ _|  |  \\/  |/  __|\n"
+        "  | |_) | |_) | |_) | | _| | |   | |   | |\\/| |\\__ \\ \n"
+        "  |  __/|  _ <|  _ <| | |__| |__ | |   | |  | |___) |\n"
+        "  |_|   |_| \\_\\_| \\_\\_|____|____|___|  |_|  |_|____/ \n");
+    cprintf(C_BOLD, "         P R O J E C T   M A Y H E M   M G M T\n");
+    cprintf(C_DIM,  "      [");
+    cprintf(C_BOLD C_GREEN, "########");
+    cprintf(C_DIM,  "");
+    cprintf(C_YELLOW, "~~~~~");
+    cprintf(C_DIM,  "----]  plan . schedule . ship\n\n");
+}
+
+void goodbye(void) {
+    cprintf(C_DIM,
+        "\n"
+        "      .-----------------------------.\n"
+        "      |  it's only after we've lost  |\n"
+        "      |  everything that we're free  |\n"
+        "      '-----------------------------'\n");
+    cprintf(C_DIM, "      \"You met me at a very strange time in my life.\"\n\n");
+}
+
 void cprintf(const char *color, const char *fmt, ...) {
     va_list ap;
     fputs(color, stdout);

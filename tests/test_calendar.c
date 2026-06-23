@@ -39,7 +39,7 @@ int main(void) {
     /* One backend specialist: the only person who can do any of these tasks, so
      * greedy is forced onto her in every project (no escape to another member). */
     carol = company_add_member(c, "Carol", "Engineer");
-    team_member_add_skill(carol, SKILL_BACKEND);
+    team_member_set_skills(carol, SKILL_BACKEND);
 
     /* Project A and B share the SAME start date -> day frames align, so a correct
      * calendar must serialize B strictly after A. C starts 3 days after A -> tests

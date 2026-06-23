@@ -9,6 +9,14 @@
 /// <param name="c">The open company.</param>
 void menu_company(Company *c);
 
+/// <summary>
+/// Interactive role sign-in: lists the roles from roles.cfg and sets the active
+/// session's privilege mask. Loops until a valid choice; empty/EOF defaults to
+/// System Admin.
+/// </summary>
+/// <returns>1 if the user chose to exit the program, 0 once a role is set.</returns>
+int choose_role(void);
+
 /* ---- Project-level menus (require active project + company context) ------ */
 
 /// <summary>Task menu: list/add/remove/edit/status/link/deps/manual-assign.</summary>
@@ -24,61 +32,6 @@ void menu_milestones(Project *p);
 /// <param name="project_idx">Index of the project to schedule.</param>
 void menu_schedule(Company *c, int project_idx);
 
-/* ---- Breadcrumb navigation bar ------------------------------------------ */
-
-/// <summary>Push a label onto the breadcrumb trail (when entering a submenu).</summary>
-/// <param name="name">Crumb label.</param>
-void crumb_push(const char *name);
-
-/// <summary>Pop the last breadcrumb label (when leaving a submenu).</summary>
-void crumb_pop(void);
-
-/// <summary>Draw the title banner + breadcrumb trail WITHOUT clearing the screen.</summary>
-void crumb_print(void);
-
-/// <summary>Clear the screen, then draw the title banner + breadcrumb trail.</summary>
-void crumb_refresh(void);
-
-/* ---- Generic menu runner (opaque context) ------------------------------- */
-
-/// <summary>
-/// Generic menu loop over an opaque context: refresh, optional render, print
-/// options, read a choice, dispatch to handler. Pauses after each action.
-/// </summary>
-/// <param name="ctx">Context passed to render/handler (cast inside them).</param>
-/// <param name="render">Optional pre-options renderer, or NULL.</param>
-/// <param name="options">Options line to display.</param>
-/// <param name="handler">Choice handler; returns non-zero to exit the menu.</param>
-void run_menu(void *ctx,
-              void (*render)(void *ctx),
-              const char *options,
-              int  (*handler)(void *ctx, int choice));
-
-/* ---- Shared input helpers ------------------------------------------------ */
-
-/// <summary>Prompt for an integer (with an "(Enter to cancel)" hint).</summary>
-/// <param name="prompt">Prompt text.</param>
-/// <param name="out">Receives the parsed value on success.</param>
-/// <returns>1 on a valid number, 0 on invalid input, -1 if cancelled (empty).</returns>
-int read_int(const char *prompt, int *out);
-
-/// <summary>Prompt for an integer without the cancel hint (menu navigation).</summary>
-/// <param name="prompt">Prompt text.</param>
-/// <param name="out">Receives the parsed value on success.</param>
-/// <returns>1 on a valid number, 0 on invalid input, -1 if cancelled (empty).</returns>
-int read_nav(const char *prompt, int *out);
-
-/// <summary>Prompt for a string into a fixed buffer (newline trimmed).</summary>
-/// <param name="prompt">Prompt text.</param>
-/// <param name="buf">Destination buffer.</param>
-/// <param name="max">Buffer size.</param>
-/// <returns>1 on input, -1 if cancelled (empty).</returns>
-int read_str(const char *prompt, char *buf, int max);
-
-/// <summary>Prompt for a float.</summary>
-/// <param name="prompt">Prompt text.</param>
-/// <param name="out">Receives the parsed value on success.</param>
-/// <returns>1 on a valid number, 0 on invalid input, -1 if cancelled (empty).</returns>
-int read_float(const char *prompt, float *out);
+/* Breadcrumb + line input + the menu runners are in tui_framework.h. */
 
 #endif /* MENUS_H */

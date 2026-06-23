@@ -1,9 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util.h"
 #include "project.h"
 
 #define INIT_CAP 8
+
+/* A milestone whose forecast lands within this many days of its deadline (but
+ * not past it) is flagged "at risk" rather than "on track". */
+#define MILESTONE_AT_RISK_BUFFER_DAYS 2
 
 /* ---- calendar helpers --------------------------------------------------- */
 
@@ -67,7 +72,7 @@ Project *project_create(const char *name, Date start_date) {
     if (!p) return NULL;
 
     memset(p, 0, sizeof(Project));
-    strncpy(p->name, name, MAX_NAME_LEN - 1);
+    str_copy(p->name, name, MAX_NAME_LEN);
     p->start_date     = start_date;
     p->task_capacity  = INIT_CAP;
     p->milestone_capacity = INIT_CAP;
@@ -132,9 +137,8 @@ Task* project_add_fixed_block(Project* p, const char* label, int assignee_id,
     if (length_days < 1) length_days = 1;
     if (start_day   < 0) start_day   = 0;
     task_set_pert(t, (float)length_days, (float)length_days, (float)length_days);
-    t->required_skills    = 0;          /* no skills: never picked for real work */
-    t->assignee_id        = assignee_id;
-    t->manually_assigned  = 1;          /* greedy keeps the pin */
+    task_set_skills(t, 0);              /* no skills: never picked for real work */
+    task_pin_assignee(t, assignee_id);  /* fixed block belongs to this member */
     t->fixed_time         = 1;          /* forward_pass leaves the window in place */
     t->sched_start        = start_day;
     t->sched_end          = start_day + length_days;
@@ -268,8 +272,18 @@ int project_link_task_milestone(Project* p, int task_id, int milestone_id) {
 	Task* t = project_find_task(p, task_id);
 	Milestone* m = project_find_milestone(p, milestone_id);
 	if (!t || !m) return 0;
+	/* Membership is recorded on the milestone's task list (a task may feed several
+	 * milestones). milestone_id keeps the most-recent link for split/persistence. */
 	t->milestone_id = milestone_id;
 	return milestone_add_task(m, task_id);
+}
+
+int project_unlink_task_milestone(Project* p, int task_id, int milestone_id) {
+	Task* t = project_find_task(p, task_id);
+	Milestone* m = project_find_milestone(p, milestone_id);
+	if (!t || !m) return 0;
+	if (t->milestone_id == milestone_id) t->milestone_id = -1;
+	return milestone_remove_task(m, task_id);
 }
 
 int milestone_forecast_day(const Project* p, const Milestone* m) {
@@ -285,7 +299,7 @@ MilestoneStatus milestone_status(const Project* p, const Milestone* m) {
 	int fc = milestone_forecast_day(p, m);
 	if (fc < 0)                  return MS_NO_DATA;
 	if (fc > m->deadline_day)    return MS_LATE;
-	if (fc >= m->deadline_day - 2) return MS_AT_RISK;   /* within a 2-day buffer */
+	if (fc >= m->deadline_day - MILESTONE_AT_RISK_BUFFER_DAYS) return MS_AT_RISK;
 	return MS_ON_TRACK;
 }
 
@@ -328,17 +342,18 @@ Task* project_split_task(Project* p, int task_id, float first_fraction) {
 
 	task_set_pert(b, a->pert_min * (1.0f - f), a->pert_likely * (1.0f - f), a->pert_max * (1.0f - f));
 	task_set_risk(b, a->risk);
-	b->required_skills   = a->required_skills;
-	b->assignee_id       = a->assignee_id;
-	b->manually_assigned = a->manually_assigned;
-	b->status            = a->status;
+	task_set_skills(b, a->required_skills);
+	/* part 2 inherits part 1's assignment, preserving its pinned/auto state */
+	if (a->manually_assigned) task_pin_assignee(b, a->assignee_id);
+	else                      task_set_assignee(b, a->assignee_id);
+	task_set_status(b, a->status);
 
 	/* shrink part 1 and tag its title */
 	task_set_pert(a, a->pert_min * f, a->pert_likely * f, a->pert_max * f);
 	{
 		char t1[MAX_TITLE_LEN];
 		snprintf(t1, sizeof t1, "%.*s (part 1)", MAX_TITLE_LEN - 12, a->title);
-		strncpy(a->title, t1, MAX_TITLE_LEN - 1);
+		str_copy(a->title, t1, MAX_TITLE_LEN);
 		a->title[MAX_TITLE_LEN - 1] = '\0';
 	}
 
@@ -429,20 +444,4 @@ int project_would_create_cycle(const Project* p, int pre_id, int post_id)
 
 
 /* ---- summary ------------------------------------------------------------ */
-
-void project_print_summary(const Project *p) {
-    int i;
-    printf("=== Project: %s  (%d-%02d-%02d) ===\n",
-           p->name, p->start_date.year, p->start_date.month, p->start_date.day);
-    printf("Tasks: %d   Milestones: %d   Members on roster: %d\n\n",
-           p->task_count, p->milestone_count, p->member_ids.count);
-
-    printf("-- Tasks --\n");
-    for (i = 0; i < p->task_count; i++)
-        task_print(p->tasks[i]);
-
-    printf("\n-- Milestones --\n");
-    for (i = 0; i < p->milestone_count; i++)
-        milestone_print(p->milestones[i]);
-}
 

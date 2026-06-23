@@ -9,6 +9,12 @@ void screen_clear(void);
 /* Print a prompt and block until the user presses Enter. */
 void screen_pause(void);
 
+/* Print the application's ASCII title banner (logo + tagline). */
+void print_banner(void);
+
+/* Print the parting message shown on program exit. */
+void goodbye(void);
+
 /* ---- ANSI colours ------------------------------------------------------- */
 /* Concatenate with string LITERALS: printf(C_CYAN "label" C_RESET " %s\n", v).
  * For runtime strings or whole lines, use cprintf(). */

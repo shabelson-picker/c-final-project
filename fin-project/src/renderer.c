@@ -84,18 +84,24 @@ static int cmp_gantt_row(const void *a, const void *b) {
     return ra->t->id - rb->t->id;
 }
 
+/* Allocate one display row per task (carrying its DAG/topo order) and sort them
+ * by start day. p->tasks is left untouched. Caller frees. NULL on OOM. */
+static GanttRow *gantt_build_rows(const Project *p) {
+    int i;
+    GanttRow *rows = (GanttRow *)malloc((size_t)(p->task_count ? p->task_count : 1) * sizeof(GanttRow));
+    if (!rows) return NULL;
+    for (i = 0; i < p->task_count; i++) { rows[i].t = p->tasks[i]; rows[i].dag = p->tasks[i]->topo_order; }
+    qsort(rows, (size_t)p->task_count, sizeof(GanttRow), cmp_gantt_row);
+    return rows;
+}
+
 void render_gantt(const Project *p, const Company *c, int width) {
     int i, j, project_end = 0, day0 = 0, span, start_col;
     char *bar  = (char *)malloc((size_t)(width + 1));
     char *kind = (char *)malloc((size_t)(width + 1));
-    GanttRow *rows = (GanttRow *)malloc((size_t)(p->task_count ? p->task_count : 1) * sizeof(GanttRow));
+    GanttRow *rows = gantt_build_rows(p);
 
     if (!bar || !kind || !rows) { free(bar); free(kind); free(rows); return; }
-
-    /* Build display rows from the persisted DAG (topological) order; sorted by
-     * start day for display only (p->tasks untouched). */
-    for (i = 0; i < p->task_count; i++) { rows[i].t = p->tasks[i]; rows[i].dag = p->tasks[i]->topo_order; }
-    qsort(rows, (size_t)p->task_count, sizeof(GanttRow), cmp_gantt_row);
 
     /* Pass 1 - project end */
     for (i = 0; i < p->task_count; i++)
@@ -195,12 +201,9 @@ void render_gantt_html(FILE *out, const Project *p, const Company *c, int width)
     int i, j, project_end = 0;
     char *bar  = (char *)malloc((size_t)(width + 1));
     char *kind = (char *)malloc((size_t)(width + 1));
-    GanttRow *rows = (GanttRow *)malloc((size_t)(p->task_count ? p->task_count : 1) * sizeof(GanttRow));
+    GanttRow *rows = gantt_build_rows(p);
 
     if (!bar || !kind || !rows) { free(bar); free(kind); free(rows); return; }
-
-    for (i = 0; i < p->task_count; i++) { rows[i].t = p->tasks[i]; rows[i].dag = p->tasks[i]->topo_order; }
-    qsort(rows, (size_t)p->task_count, sizeof(GanttRow), cmp_gantt_row);
 
     for (i = 0; i < p->task_count; i++)
         if (p->tasks[i]->sched_end > project_end)

@@ -7,12 +7,15 @@
 
 #define MAX_ASSIGN_PASSES 8
 
+/* Risk-weighted strategy stretches a task's duration by up to this fraction of
+ * its expected time, scaled by the task's risk (0..1): dur * (1 + risk*WEIGHT). */
+#define RISK_SCHEDULE_WEIGHT 0.5f
+
 /* Assignment policy is module-level so the menu can set it without threading a
  * parameter through every scheduling call site. Default keeps the old behavior. */
 static AssignPolicy g_assign_policy = ASSIGN_EARLIEST_FREE;
 
 void         assign_set_policy(AssignPolicy policy) { g_assign_policy = policy; }
-AssignPolicy assign_get_policy(void)                { return g_assign_policy; }
 
 static int popcount32(uint32_t x) {
     int n = 0;
@@ -107,10 +110,16 @@ int *topo_sort(Project *p, int *out_count) {
 
 static float effective_duration(const Task *t, ScheduleStrategy s) {
     if (s == SCHED_RISK_WEIGHTED_CRITICAL)
-        return t->pert_expected * (1.0f + t->risk * 0.5f);
+        return t->pert_expected * (1.0f + t->risk * RISK_SCHEDULE_WEIGHT);
     if (s == SCHED_PESSIMISTIC)
         return t->pert_max;
     return t->pert_expected;
+}
+
+/* Effective duration rounded to whole days (round half up). The scheduler works
+ * in integer days, so every sched_start/end offset goes through this. */
+static int duration_days(const Task *t, ScheduleStrategy s) {
+    return (int)(effective_duration(t, s) + 0.5f);
 }
 
 /* =========================================================================
@@ -136,7 +145,7 @@ void forward_pass(Project *p, const int *order, int n, ScheduleStrategy s) {
 
         if (t->min_start > earliest) earliest = t->min_start;  /* cross-project / pinned floor */
         t->sched_start = earliest;
-        t->sched_end   = earliest + (int)(effective_duration(t, s) + 0.5f);
+        t->sched_end   = earliest + duration_days(t, s);
     }
 }
 
@@ -165,7 +174,7 @@ void backward_pass(Project *p, const int *order, int n, ScheduleStrategy s) {
         Task *t = p->tasks[i];
         t->latest_start = has_any_successor(p, t, n)
                           ? project_end
-                          : project_end - (int)(effective_duration(t, s) + 0.5f);
+                          : project_end - duration_days(t, s);
     }
 
     for (i = n - 1; i >= 0; i--) {
@@ -176,7 +185,7 @@ void backward_pass(Project *p, const int *order, int n, ScheduleStrategy s) {
             if (t->post_ids.data[j] == END_NODE_ID) continue;
             post = project_find_task(p, t->post_ids.data[j]);
             if (post) {
-                int ls = post->latest_start - (int)(effective_duration(t, s) + 0.5f);
+                int ls = post->latest_start - duration_days(t, s);
                 if (ls < t->latest_start) t->latest_start = ls;
             }
         }
@@ -185,14 +194,14 @@ void backward_pass(Project *p, const int *order, int n, ScheduleStrategy s) {
             int k;
             for (k = 0; k < p->tasks[j]->work_pre_ids.count; k++)
                 if (p->tasks[j]->work_pre_ids.data[k] == t->id) {
-                    int ls = p->tasks[j]->latest_start - (int)(effective_duration(t, s) + 0.5f);
+                    int ls = p->tasks[j]->latest_start - duration_days(t, s);
                     if (ls < t->latest_start) t->latest_start = ls;
                     break;
                 }
         }
 
         t->slack       = t->latest_start - t->sched_start;
-        t->is_critical = (t->slack == 0) ? 1 : 0;
+        t->is_critical = (t->slack == 0) ? 1 : 0;   /* zero slack = on the critical path */
     }
 }
 
@@ -256,7 +265,7 @@ static void clear_work_assignments(Project *p) {
         dia_init(&p->tasks[i]->work_pre_ids);
         p->tasks[i]->min_start = 0;            /* recomputed from cross-project floor */
         if (!p->tasks[i]->manually_assigned)   /* keep pinned assignments */
-            p->tasks[i]->assignee_id = -1;
+            task_clear_assignment(p->tasks[i]);
     }
 }
 
@@ -407,7 +416,7 @@ static int assignment_pass(Company *c, Project *p, Task **sorted,
 
         apply_work_dep_if_conflict(t, best_mi, member_free_day, member_last_task);
 
-        t->assignee_id = c->members[best_mi]->id;
+        task_set_assignee(t, c->members[best_mi]->id);
         t->min_start   = floor[best_mi];   /* cross-project earliest-start floor */
         update_member_state(t, best_mi, member_free_day, member_last_task);
         member_load[best_mi]++;

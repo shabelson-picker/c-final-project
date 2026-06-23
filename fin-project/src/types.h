@@ -18,6 +18,8 @@ typedef enum {
 } Skill;
 
 #define SKILL_COUNT 8
+/* Bitmask of every defined skill; used to reject undefined bits in setters. */
+#define SKILL_ALL_MASK ((1u << SKILL_COUNT) - 1)
 /* Display names - index i maps to Skill (1 << i) */
 static const char * const SKILL_NAMES[SKILL_COUNT] = {
     "Frontend", "Backend", "Hardware", "Embedded",
@@ -37,10 +39,5 @@ typedef struct {
     int month;
     int day;
 } Date;
-
-typedef struct {
-    int project_id;
-    int task_id;
-} TaskRef;
 
 #endif /* TYPES_H */

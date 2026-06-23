@@ -25,7 +25,8 @@ int dia_append(DynamicIntArray *a, int value) {
     a->data[a->count++] = value;
     return 1;
 }
-int cmp(const void* a, const void* b) 
+/* qsort/bsearch comparator for ints (ascending). File-local. */
+static int cmp(const void* a, const void* b)
 {
     int* val_a = (int*)(a);
     int* val_b = (int*)(b);
@@ -67,7 +68,9 @@ int dia_sort_remove(DynamicIntArray *a, int value) {
 }
 
 
-int dia_insert(DynamicIntArray* a,int index, int value) 
+/* Insert value at index, shifting the tail up. Falls back to append for an
+ * out-of-range index or an empty array. Returns 1 on success, 0 on failure. */
+int dia_insert(DynamicIntArray* a,int index, int value)
 {
     if (index < 0) return 0;
     if (index > a->count || a->count ==0)

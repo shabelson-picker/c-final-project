@@ -72,9 +72,10 @@ void  task_set_pert(Task *t, float min, float likely, float max);
 /// <param name="risk">Risk weight (0 = none, 1 = critical).</param>
 void  task_set_risk(Task *t, float risk);
 
-/// <summary>Set the required-skills bitmask.</summary>
+/// <summary>Set the required-skills bitmask (combine Skill values with |).
+/// Bits outside the defined skill set are ignored.</summary>
 /// <param name="t">Task.</param>
-/// <param name="skills">Bitmask of Skill values.</param>
+/// <param name="skills">Bitmask of required Skill values (0 = none).</param>
 void  task_set_skills(Task *t, uint32_t skills);
 
 /* ---- Dependency management ---------------------------------------------- */
@@ -109,13 +110,28 @@ int   task_remove_pre(Task *t, int pre_id);
 /// <returns>1 if removed, 0 if not present.</returns>
 int   task_remove_post(Task *t, int post_id);
 
-/* ---- Queries ------------------------------------------------------------ */
+/* ---- State --------------------------------------------------------------- */
 
-/// <summary>Test whether a member's skills cover this task's required skills.</summary>
+/// <summary>Set the task's lifecycle status.</summary>
 /// <param name="t">Task.</param>
-/// <param name="member_skills">Candidate member's skill bitmask.</param>
-/// <returns>1 if all required skills are present, 0 otherwise.</returns>
-int   task_can_be_done_by(const Task *t, uint32_t member_skills);
+/// <param name="status">New status.</param>
+void  task_set_status(Task *t, TaskStatus status);
+
+/// <summary>Set a task's assignee without pinning it (auto-assignment); leaves
+/// the manually-assigned flag unchanged.</summary>
+/// <param name="t">Task.</param>
+/// <param name="member_id">Member to assign, or -1 for none.</param>
+void  task_set_assignee(Task *t, int member_id);
+
+/// <summary>Pin a task to a member: sets the assignee and marks it manually
+/// assigned, so the scheduler keeps this owner instead of reassigning.</summary>
+/// <param name="t">Task.</param>
+/// <param name="member_id">Member to pin as the assignee.</param>
+void  task_pin_assignee(Task *t, int member_id);
+
+/// <summary>Clear a task's assignment: no assignee and not manually assigned.</summary>
+/// <param name="t">Task.</param>
+void  task_clear_assignment(Task *t);
 
 /* ---- Display ------------------------------------------------------------ */
 

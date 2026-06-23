@@ -1,10 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "util.h"
 #include "company.h"
 #include "constants.h"
 #include "persistence.h"
 #include "file_browser.h"
+#include "tui_framework.h"
 #include "menus.h"
 #include "ui.h"
 
@@ -35,7 +37,7 @@ Company *company_create(const char *name) {
     if (!c) return NULL;
 
     memset(c, 0, sizeof(Company));
-    strncpy(c->name, name, MAX_NAME_LEN - 1);
+    str_copy(c->name, name, MAX_NAME_LEN);
 
     c->member_capacity  = INIT_CAP;
     c->project_capacity = INIT_CAP;
@@ -154,8 +156,7 @@ int company_assign_member(Company *c, int project_idx, int member_id, int task_i
                    m->name, t->title);
             return 0;
         }
-        t->assignee_id = member_id;
-        tra_append(&m->tasks, project_idx, task_id);
+        task_set_assignee(t, member_id);
     }
     return 1;
 }
@@ -164,8 +165,7 @@ Company *company_new_interactive(void) {
     char name[MAX_NAME_LEN], parent[MAX_PATH_LEN], dir[MAX_PATH_LEN];
     Company *c;
 
-    read_str("  Company name: ", name, MAX_NAME_LEN);
-    if (name[0] == '\0') strncpy(name, "Untitled", MAX_NAME_LEN - 1);
+    if (read_str("  Company name: ", name, MAX_NAME_LEN) == -1) return NULL;  /* Enter cancels */
 
     printf("  Select parent directory:\n");
     if (!dir_browser(parent, MAX_PATH_LEN)) return NULL;
@@ -175,7 +175,7 @@ Company *company_new_interactive(void) {
     c = company_create(name);
     if (!c) { fprintf(stderr, "Fatal: could not allocate company.\n"); return NULL; }
 
-    strncpy(c->save_dir, dir, sizeof(c->save_dir) - 1);
+    str_copy(c->save_dir, dir, sizeof(c->save_dir));
 
     if (!company_save(c)) {
         printf("  Could not create company bundle at '%s'.\n", c->save_dir);

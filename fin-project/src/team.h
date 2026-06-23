@@ -3,7 +3,6 @@
 
 #include "types.h"
 #include "dynamic_int_array.h"
-#include "task_ref_array.h"
 
 /// <summary>
 /// A company team member. skills is a bitmask of Skill values. project_ids is a
@@ -17,7 +16,6 @@ typedef struct {
     uint32_t        skills;                 /* bitmask of Skill values */
     float           availability;           /* 0.0 - 1.0 fraction of a workday */
     DynamicIntArray project_ids;            /* derived: company project indices */
-    TaskRefArray    tasks;                  /* (project_id, task_id) assignments */
 } TeamMember;
 
 /// <summary>Allocate a team member with availability defaulted to 1.0.</summary>
@@ -31,15 +29,11 @@ TeamMember *team_member_create(int id, const char *name, const char *role);
 /// <param name="m">Member to free (NULL-safe).</param>
 void        team_member_destroy(TeamMember *m);
 
-/// <summary>Set a skill bit on the member.</summary>
+/// <summary>Set the member's skill bitmask (combine Skill values with |).
+/// Bits outside the defined skill set are ignored.</summary>
 /// <param name="m">Member.</param>
-/// <param name="skill">Skill flag to add.</param>
-void        team_member_add_skill(TeamMember *m, Skill skill);
-
-/// <summary>Clear a skill bit on the member.</summary>
-/// <param name="m">Member.</param>
-/// <param name="skill">Skill flag to remove.</param>
-void        team_member_remove_skill(TeamMember *m, Skill skill);
+/// <param name="skills">Bitmask of Skill values the member has (0 = none).</param>
+void        team_member_set_skills(TeamMember *m, uint32_t skills);
 
 /// <summary>Test whether the member has ALL required skills.</summary>
 /// <param name="m">Member.</param>
