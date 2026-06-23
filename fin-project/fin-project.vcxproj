@@ -148,6 +148,7 @@
     <ClCompile Include="src\ui.c" />
     <ClCompile Include="src\util.c" />
     <ClCompile Include="src\tui_framework.c" />
+    <ClCompile Include="src\html_builder.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\company.h" />
@@ -171,6 +172,7 @@
     <ClInclude Include="src\ui.h" />
     <ClInclude Include="src\util.h" />
     <ClInclude Include="src\tui_framework.h" />
+    <ClInclude Include="src\html_builder.h" />
   </ItemGroup>
   <ItemGroup>
     <!-- Ship roles.cfg next to the .exe so the runtime get_exe_dir() lookup
