@@ -3,6 +3,7 @@
 #include <string.h>
 #include "dot_export.h"
 #include "constants.h"
+#include "util.h"
 
 int dot_write(const Project *p, const char *filename) {
     int i, j;
@@ -74,20 +75,6 @@ int dot_write(const Project *p, const char *filename) {
 int export_dot(const Project *p, const char *filename) {
     if (!dot_write(p, filename)) return 0;
     printf("  Saved: %s\n", filename);
-
-#ifdef _WIN32
-    {
-        char cmd[512];
-        snprintf(cmd, sizeof(cmd), "start \"\" \"%s\"", filename);
-        system(cmd);
-    }
-#else
-    {
-        char cmd[512];
-        snprintf(cmd, sizeof(cmd), "xdg-open \"%s\" &", filename);
-        system(cmd);
-    }
-#endif
-
+    open_in_default_app(filename);
     return 1;
 }

@@ -13,4 +13,9 @@
 /// <param name="size">Total size of dst in bytes.</param>
 void str_copy(char *dst, const char *src, size_t size);
 
+/// <summary>Open a file path with the OS default application (browser, image
+/// viewer, etc.). Windows: `start`; otherwise: `xdg-open`.</summary>
+/// <param name="path">File to open.</param>
+void open_in_default_app(const char *path);
+
 #endif /* UTIL_H */

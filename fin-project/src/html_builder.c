@@ -63,6 +63,20 @@ void html_doc_close(FILE *f) {
     fprintf(f, "</div>\n</body>\n</html>\n");
 }
 
+void html_hero(FILE *f, const char *title, const char *meta_html) {
+    fprintf(f, "<div class=\"hero\"><h1>");
+    html_escape(f, title);
+    fprintf(f, "</h1>\n<p class=\"meta\">%s</p></div>\n", meta_html);
+}
+
+void html_pill(FILE *f, const char *cls, const char *text) {
+    fprintf(f, "<span class=\"pill %s\">%s</span>", cls, text);
+}
+
+void html_progress_bar(FILE *f, int pct) {
+    fprintf(f, "<div class=\"bar\"><span style=\"width:%d%%\"></span></div>%d%%", pct, pct);
+}
+
 int html_inline_svg(FILE *f, const char *svgpath) {
     FILE *s = fopen(svgpath, "rb");
     long sz;
@@ -85,14 +99,4 @@ int html_inline_svg(FILE *f, const char *svgpath) {
     if (start) fwrite(start, 1, strlen(start), f);
     free(buf);
     return start != NULL;
-}
-
-void html_open_in_browser(const char *filename) {
-    char cmd[512];
-#ifdef _WIN32
-    snprintf(cmd, sizeof(cmd), "start \"\" \"%s\"", filename);
-#else
-    snprintf(cmd, sizeof(cmd), "xdg-open \"%s\" &", filename);
-#endif
-    system(cmd);
 }

@@ -9,6 +9,10 @@ static const char *STATUS_LABELS[] = {
     "TODO", "IN_PROGRESS", "DONE", "CANCELLED", "BLOCKED"
 };
 
+const char *task_status_label(TaskStatus s) {
+    return (s >= 0 && s <= STATUS_BLOCKED) ? STATUS_LABELS[s] : STATUS_LABELS[0];
+}
+
 Task *task_create(int id, const char *title, const char *description) {
     Task *t = (Task *)malloc(sizeof(Task));
     if (!t) return NULL;

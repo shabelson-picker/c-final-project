@@ -117,6 +117,10 @@ int   task_remove_post(Task *t, int post_id);
 /// <param name="status">New status.</param>
 void  task_set_status(Task *t, TaskStatus status);
 
+/// <summary>Canonical uppercase label for a status ("TODO", "IN_PROGRESS", ...).
+/// Out-of-range values map to "TODO".</summary>
+const char *task_status_label(TaskStatus s);
+
 /// <summary>Set a task's assignee without pinning it (auto-assignment); leaves
 /// the manually-assigned flag unchanged.</summary>
 /// <param name="t">Task.</param>

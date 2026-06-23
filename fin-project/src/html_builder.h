@@ -35,7 +35,4 @@ void html_progress_bar(FILE *f, int pct);
 /// prolog. Returns 1 if anything was written, 0 if missing/empty.</summary>
 int  html_inline_svg(FILE *f, const char *svgpath);
 
-/// <summary>Open a file in the platform default browser.</summary>
-void html_open_in_browser(const char *filename);
-
 #endif /* HTML_BUILDER_H */

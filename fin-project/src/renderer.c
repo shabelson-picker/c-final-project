@@ -4,15 +4,7 @@
 #include "renderer.h"
 #include "constants.h"
 #include "team.h"
-
-/* ANSI color codes */
-#define ANSI_RESET   "\033[0m"
-#define ANSI_BOLD    "\033[1m"
-#define ANSI_DIM     "\033[2m"
-#define ANSI_RED     "\033[31m"
-#define ANSI_GREEN   "\033[32m"
-#define ANSI_YELLOW  "\033[33m"
-#define ANSI_CYAN    "\033[36m"
+#include "ui.h"      /* C_* ANSI colour macros (shared) */
 
 /* ---- Gantt chart -------------------------------------------------------- */
 
@@ -46,7 +38,7 @@ static void print_gantt_ruler(int span, int width) {
         int  len = sprintf(num, "%d", day);
         for (k = 0; k < len && col + k < width; k++) ruler[col + k] = (char)num[k];
     }
-    printf("%*s%s%s%s\n", GANTT_AXIS_INDENT, "", ANSI_DIM, ruler, ANSI_RESET);
+    printf("%*s%s%s%s\n", GANTT_AXIS_INDENT, "", C_DIM, ruler, C_RESET);
     free(ruler);
 }
 
@@ -127,9 +119,9 @@ void render_gantt(const Project *p, const Company *c, int width) {
     start_col = day_to_col(day0, span, width);
 
     printf("\n%s=== Gantt Chart  (project duration: %d days, starts company-day %d) ===%s\n",
-           ANSI_BOLD, project_end, day0, ANSI_RESET);
+           C_BOLD, project_end, day0, C_RESET);
     printf("  Legend: %s#%s optimistic  %s~%s expected  %s-%s pessimistic overrun   %s:%s project start\n",
-           ANSI_BOLD, ANSI_RESET, ANSI_DIM, ANSI_RESET, ANSI_YELLOW, ANSI_RESET, ANSI_CYAN, ANSI_RESET);
+           C_BOLD, C_RESET, C_DIM, C_RESET, C_YELLOW, C_RESET, C_CYAN, C_RESET);
     print_gantt_ruler(span, width);
     printf("%-22s  %-14s  %-18s  %-4s |", "Task", "Criticality", "Assignee", "DAG");
     for (j = 0; j < width; j++) printf(j % 10 == 0 ? "|" : "-");
@@ -137,7 +129,7 @@ void render_gantt(const Project *p, const Company *c, int width) {
 
     for (i = 0; i < p->task_count; i++) {
         Task       *t        = rows[i].t;
-        const char *color    = t->is_critical ? ANSI_RED : ANSI_GREEN;
+        const char *color    = t->is_critical ? C_RED : C_GREEN;
         TeamMember *assignee = (c && t->assignee_id != -1)
                                ? company_find_member((Company *)c, t->assignee_id)
                                : NULL;
@@ -146,19 +138,19 @@ void render_gantt(const Project *p, const Company *c, int width) {
 
         /* Left columns */
         printf("%-22.22s  ", t->title);
-        if (t->is_critical) printf("%s%-14s%s  ", ANSI_RED,    "[CRITICAL]",     ANSI_RESET);
-        else                printf("%s%-14s%s  ", ANSI_DIM,    "[NOT CRITICAL]",  ANSI_RESET);
+        if (t->is_critical) printf("%s%-14s%s  ", C_RED,    "[CRITICAL]",     C_RESET);
+        else                printf("%s%-14s%s  ", C_DIM,    "[NOT CRITICAL]",  C_RESET);
         if (assignee)       printf("%-18.18s  ", assignee->name);
-        else                printf("%s%-18s%s  ", ANSI_YELLOW, "[UNASSIGNED]",    ANSI_RESET);
+        else                printf("%s%-18s%s  ", C_YELLOW, "[UNASSIGNED]",    C_RESET);
         if (rows[i].dag > 0) printf("%-4d |", rows[i].dag);
         else                 printf("%-4s |", "-");
 
         /* Bar */
         for (j = 0; j < width; j++) {
-            if      (kind[j] == 1) printf("%s%s#%s", ANSI_BOLD, color, ANSI_RESET);
-            else if (kind[j] == 2) printf("%s~%s",   ANSI_DIM,         ANSI_RESET);
-            else if (kind[j] == 3)   printf("%s-%s",   ANSI_YELLOW,      ANSI_RESET);
-            else if (j == start_col) printf("%s:%s",   ANSI_CYAN,        ANSI_RESET);
+            if      (kind[j] == 1) printf("%s%s#%s", C_BOLD, color, C_RESET);
+            else if (kind[j] == 2) printf("%s~%s",   C_DIM,         C_RESET);
+            else if (kind[j] == 3)   printf("%s-%s",   C_YELLOW,      C_RESET);
+            else if (j == start_col) printf("%s:%s",   C_CYAN,        C_RESET);
             else                     printf(" ");
         }
         printf("\n");
@@ -168,13 +160,13 @@ void render_gantt(const Project *p, const Company *c, int width) {
     for (i = 0; i < p->milestone_count; i++) {
         Milestone *m   = p->milestones[i];
         int        col = day_to_col(day0 + m->deadline_day, span, width);
-        printf("%s%-28s |%s", ANSI_YELLOW, m->name, ANSI_RESET);
+        printf("%s%-28s |%s", C_YELLOW, m->name, C_RESET);
         for (j = 0; j < width; j++) {
-            if      (j == col)       printf("%s|%s", ANSI_YELLOW, ANSI_RESET);
-            else if (j == start_col) printf("%s:%s", ANSI_CYAN,   ANSI_RESET);
+            if      (j == col)       printf("%s|%s", C_YELLOW, C_RESET);
+            else if (j == start_col) printf("%s:%s", C_CYAN,   C_RESET);
             else                     printf(" ");
         }
-        printf("%s  M%d (day %d)%s\n", ANSI_YELLOW, m->id, day0 + m->deadline_day, ANSI_RESET);
+        printf("%s  M%d (day %d)%s\n", C_YELLOW, m->id, day0 + m->deadline_day, C_RESET);
     }
 
     free(bar);
@@ -267,7 +259,7 @@ void render_portfolio_gantt(const Company *c, int width) {
     int span_days = 0;
 
     if (c->project_count == 0) {
-        printf("%sNo projects.%s\n", ANSI_DIM, ANSI_RESET);
+        printf("%sNo projects.%s\n", C_DIM, C_RESET);
         return;
     }
 
@@ -300,7 +292,7 @@ void render_portfolio_gantt(const Company *c, int width) {
 
     /* Header */
     printf("\n%s=== Portfolio Gantt (%d projects, %d days span) ===%s\n",
-           ANSI_BOLD, c->project_count, span_days, ANSI_RESET);
+           C_BOLD, c->project_count, span_days, C_RESET);
 
     /* Ruler */
     printf("%-24s  %5s  |", "Project", "Days");
@@ -319,7 +311,7 @@ void render_portfolio_gantt(const Company *c, int width) {
         printf("%-24.24s  %5dd  |", p->name, makespan);
 
         if (!date_is_valid(p->start_date)) {
-            printf("%s(no start date)%s", ANSI_DIM, ANSI_RESET);
+            printf("%s(no start date)%s", C_DIM, C_RESET);
         } else {
             long sa = date_to_days(p->start_date);
             long ea = sa + makespan;
@@ -333,7 +325,7 @@ void render_portfolio_gantt(const Company *c, int width) {
 
             for (j = 0; j < width; j++) {
                 if (j >= col_start && j <= col_end)
-                    printf("%s#%s", ANSI_CYAN, ANSI_RESET);
+                    printf("%s#%s", C_CYAN, C_RESET);
                 else
                     printf(" ");
             }
@@ -347,7 +339,7 @@ void render_portfolio_gantt(const Company *c, int width) {
 
 /* One color per project (cycled). */
 static const char *PROJ_PALETTE[] = {
-    ANSI_CYAN, ANSI_GREEN, ANSI_YELLOW, ANSI_RED, "\033[35m", "\033[34m"
+    C_CYAN, C_GREEN, C_YELLOW, C_RED, "\033[35m", "\033[34m"
 };
 #define PROJ_PALETTE_N ((int)(sizeof PROJ_PALETTE / sizeof PROJ_PALETTE[0]))
 
@@ -359,7 +351,7 @@ void render_company_gantt(const Company *c, int width) {
     long span;
     int  i, j, k, datable = 0, rows = 0;
 
-    if (c->project_count == 0) { printf("%sNo projects.%s\n", ANSI_DIM, ANSI_RESET); return; }
+    if (c->project_count == 0) { printf("%sNo projects.%s\n", C_DIM, C_RESET); return; }
 
     /* Pass 1: absolute timeline bounds over all tasks of datable projects. */
     for (i = 0; i < c->project_count; i++) {
@@ -381,7 +373,7 @@ void render_company_gantt(const Company *c, int width) {
     if (span <= 0) span = 1;
 
     printf("\n%s=== All Tasks - Company Timeline (%d tasks, %d days) ===%s\n",
-           ANSI_BOLD, rows, (int)(t1 - t0), ANSI_RESET);
+           C_BOLD, rows, (int)(t1 - t0), C_RESET);
     printf("%-14s  %-16s  |", "Project", "Task");
     for (j = 0; j < width; j++) printf(j % 10 == 0 ? "|" : "-");
     printf("\n");
@@ -403,9 +395,9 @@ void render_company_gantt(const Company *c, int width) {
             if (col_end   > width - 1) col_end   = width - 1;
             if (col_end < col_start)  col_end   = col_start;
 
-            printf("%s%-14.14s%s  %-16.16s  |", color, p->name, ANSI_RESET, t->title);
+            printf("%s%-14.14s%s  %-16.16s  |", color, p->name, C_RESET, t->title);
             for (k = 0; k < width; k++) {
-                if (k >= col_start && k <= col_end) printf("%s#%s", color, ANSI_RESET);
+                if (k >= col_start && k <= col_end) printf("%s#%s", color, C_RESET);
                 else                                printf(" ");
             }
             printf("\n");
@@ -416,7 +408,7 @@ void render_company_gantt(const Company *c, int width) {
     printf("\n  Legend: ");
     for (i = 0; i < c->project_count; i++) {
         if (!date_is_valid(c->projects[i]->start_date)) continue;
-        printf("%s##%s %.12s   ", PROJ_PALETTE[i % PROJ_PALETTE_N], ANSI_RESET, c->projects[i]->name);
+        printf("%s##%s %.12s   ", PROJ_PALETTE[i % PROJ_PALETTE_N], C_RESET, c->projects[i]->name);
     }
     printf("\n");
 }
@@ -451,7 +443,7 @@ void render_task_deps(const Project *p, const Task *t) {
 
     snprintf(label, sizeof(label), "[%d] %.24s", t->id, t->title);
 
-    printf("\n%s  Dependencies%s\n  ", ANSI_BOLD, ANSI_RESET);
+    printf("\n%s  Dependencies%s\n  ", C_BOLD, C_RESET);
     for (i = 0; i < PRE_COL + CTR_COL + 12; i++) printf("-");
     printf("\n\n");
 
@@ -474,12 +466,12 @@ void render_task_deps(const Project *p, const Task *t) {
         /* arrow + highlighted center + arrow */
         if (i == mid) {
             llen = (int)strlen(label);
-            printf(" %s->%s ", ANSI_DIM, ANSI_RESET);
-            printf("%s%s%s", ANSI_BOLD, ANSI_YELLOW, label);
+            printf(" %s->%s ", C_DIM, C_RESET);
+            printf("%s%s%s", C_BOLD, C_YELLOW, label);
             pad = CTR_COL - llen;
             pad_to(pad > 0 ? pad : 0);
-            printf("%s", ANSI_RESET);
-            printf(" %s->%s ", ANSI_DIM, ANSI_RESET);
+            printf("%s", C_RESET);
+            printf(" %s->%s ", C_DIM, C_RESET);
         } else {
             pad_to(CTR_COL + 8);
         }
@@ -500,33 +492,33 @@ void render_task_deps(const Project *p, const Task *t) {
 
 void render_dag(const Project *p) {
     int i, j;
-    printf("\n%s=== Dependency Graph ===%s\n", ANSI_BOLD, ANSI_RESET);
+    printf("\n%s=== Dependency Graph ===%s\n", C_BOLD, C_RESET);
 
     for (i = 0; i < p->task_count; i++) {
         Task *t = p->tasks[i];
-        const char *color = t->is_critical ? ANSI_RED : ANSI_CYAN;
+        const char *color = t->is_critical ? C_RED : C_CYAN;
 
-        printf("%s[%d] %s%s", color, t->id, t->title, ANSI_RESET);
+        printf("%s[%d] %s%s", color, t->id, t->title, C_RESET);
 
         if (t->post_ids.count > 0) {
             printf("  -->  ");
             for (j = 0; j < t->post_ids.count; j++) {
                 Task *post = project_find_task((Project *)p, t->post_ids.data[j]);
                 if (post) {
-                    const char *pc = post->is_critical ? ANSI_RED : ANSI_CYAN;
-                    printf("%s[%d]%s", pc, post->id, ANSI_RESET);
+                    const char *pc = post->is_critical ? C_RED : C_CYAN;
+                    printf("%s[%d]%s", pc, post->id, C_RESET);
                     if (j < t->post_ids.count - 1) printf(", ");
                 }
             }
         }
 
         if (t->alt_ids.count > 0) {
-            printf("  %s(alt: ", ANSI_DIM);
+            printf("  %s(alt: ", C_DIM);
             for (j = 0; j < t->alt_ids.count; j++) {
                 printf("%d", t->alt_ids.data[j]);
                 if (j < t->alt_ids.count - 1) printf(", ");
             }
-            printf(")%s", ANSI_RESET);
+            printf(")%s", C_RESET);
         }
         printf("\n");
     }

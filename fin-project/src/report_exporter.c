@@ -11,10 +11,6 @@
 #include "constants.h"
 #include "team.h"
 
-static const char *STATUS_LABELS[] = {
-    "TODO", "IN_PROGRESS", "DONE", "CANCELLED", "BLOCKED"
-};
-
 /* ---- document sections -------------------------------------------------- */
 
 static void write_head(FILE *f, const Project *p) {
@@ -30,13 +26,16 @@ static void write_header_section(FILE *f, const Project *p) {
     for (i = 0; i < p->task_count; i++)
         if (p->tasks[i]->sched_end > dur) dur = p->tasks[i]->sched_end;
 
-    fprintf(f, "<div class=\"hero\"><h1>");
-    html_escape(f, p->name);
-    fprintf(f, "</h1>\n<p class=\"meta\">Start %04d-%02d-%02d &middot; Generated %04d-%02d-%02d "
-               "&middot; Duration %d days &middot; %d tasks &middot; %d on roster</p></div>\n",
-            p->start_date.year, p->start_date.month, p->start_date.day,
-            lt ? lt->tm_year + 1900 : 0, lt ? lt->tm_mon + 1 : 0, lt ? lt->tm_mday : 0,
-            dur, p->task_count, p->member_ids.count);
+    {
+        char meta[200];
+        snprintf(meta, sizeof meta,
+                 "Start %04d-%02d-%02d &middot; Generated %04d-%02d-%02d "
+                 "&middot; Duration %d days &middot; %d tasks &middot; %d on roster",
+                 p->start_date.year, p->start_date.month, p->start_date.day,
+                 lt ? lt->tm_year + 1900 : 0, lt ? lt->tm_mon + 1 : 0, lt ? lt->tm_mday : 0,
+                 dur, p->task_count, p->member_ids.count);
+        html_hero(f, p->name, meta);
+    }
 }
 
 static void write_task_table(FILE *f, const Project *p, const Company *c) {
@@ -49,11 +48,10 @@ static void write_task_table(FILE *f, const Project *p, const Company *c) {
         Task *t = p->tasks[i];
         TeamMember *a = (c && t->assignee_id != -1)
                         ? company_find_member((Company *)c, t->assignee_id) : NULL;
-        int st = (t->status >= 0 && t->status <= 4) ? (int)t->status : 0;
 
         fprintf(f, "<tr><td>%d</td><td>", t->id);
         html_escape(f, t->title);
-        fprintf(f, "</td><td>%s</td><td>", STATUS_LABELS[st]);
+        fprintf(f, "</td><td>%s</td><td>", task_status_label(t->status));
         if (a) html_escape(f, a->name); else fprintf(f, "-");
         fprintf(f, "</td><td>%.1f / %.1f / %.1f</td><td>%.1f</td><td>%.0f/10</td>"
                    "<td>%d</td><td>%d</td><td>%d</td>",
@@ -81,8 +79,9 @@ static void write_milestones(FILE *f, const Project *p) {
         html_escape(f, m->name);
         fprintf(f, "</td><td>day %d</td>", m->deadline_day);
         if (fc >= 0) fprintf(f, "<td>day %d</td>", fc); else fprintf(f, "<td>-</td>");
-        fprintf(f, "<td>%d</td><td>%d</td><td><span class=\"pill %s\">%s</span></td></tr>\n",
-                m->priority, m->task_count, pill, milestone_status_label(st));
+        fprintf(f, "<td>%d</td><td>%d</td><td>", m->priority, m->task_count);
+        html_pill(f, pill, milestone_status_label(st));
+        fprintf(f, "</td></tr>\n");
     }
     fprintf(f, "</table></div>\n");
 }
@@ -152,10 +151,12 @@ int export_executive_report_html(const Company *c, const char *filename) {
     html_doc_open(f, title);
 
     /* Hero */
-    fprintf(f, "<div class=\"hero\"><h1>");
-    html_escape(f, c->name);
-    fprintf(f, "</h1>\n<p class=\"meta\">Executive Report &middot; Generated %04d-%02d-%02d</p></div>\n",
-            lt ? lt->tm_year + 1900 : 0, lt ? lt->tm_mon + 1 : 0, lt ? lt->tm_mday : 0);
+    {
+        char meta[80];
+        snprintf(meta, sizeof meta, "Executive Report &middot; Generated %04d-%02d-%02d",
+                 lt ? lt->tm_year + 1900 : 0, lt ? lt->tm_mon + 1 : 0, lt ? lt->tm_mday : 0);
+        html_hero(f, c->name, meta);
+    }
 
     /* KPI cards */
     fprintf(f, "<div class=\"kpis\">\n");
@@ -183,11 +184,10 @@ int export_executive_report_html(const Company *c, const char *filename) {
         pct = p->task_count ? (100 * done / p->task_count) : 0;
         fprintf(f, "<tr><td>");
         html_escape(f, p->name);
-        fprintf(f, "</td><td>%04d-%02d-%02d</td><td>%d</td>"
-                   "<td><div class=\"bar\"><span style=\"width:%d%%\"></span></div>%d%%</td>"
-                   "<td>%d days</td></tr>\n",
-                p->start_date.year, p->start_date.month, p->start_date.day,
-                p->task_count, pct, pct, dur);
+        fprintf(f, "</td><td>%04d-%02d-%02d</td><td>%d</td><td>",
+                p->start_date.year, p->start_date.month, p->start_date.day, p->task_count);
+        html_progress_bar(f, pct);
+        fprintf(f, "</td><td>%d days</td></tr>\n", dur);
     }
     fprintf(f, "</table></div>\n");
 
@@ -211,12 +211,13 @@ int export_executive_report_html(const Company *c, const char *filename) {
         html_escape(f, m ? m->name : "?");
         fprintf(f, "</td><td>");
         html_escape(f, m ? m->role : "-");
-        fprintf(f, "</td><td>%d</td><td>%d days</td><td>%s</td>"
-                   "<td><div class=\"bar\"><span style=\"width:%d%%\"></span></div>%d%%</td><td>",
-                wl[i].task_count, wl[i].committed_days, window, util, util);
-        if (wl[i].overallocated)        fprintf(f, "<span class=\"pill over\">OVERALLOCATED</span>");
-        else if (wl[i].task_count == 0) fprintf(f, "<span class=\"pill idle\">idle</span>");
-        else                            fprintf(f, "<span class=\"pill ok\">ok</span>");
+        fprintf(f, "</td><td>%d</td><td>%d days</td><td>%s</td><td>",
+                wl[i].task_count, wl[i].committed_days, window);
+        html_progress_bar(f, util);
+        fprintf(f, "</td><td>");
+        if (wl[i].overallocated)        html_pill(f, "over", "OVERALLOCATED");
+        else if (wl[i].task_count == 0) html_pill(f, "idle", "idle");
+        else                            html_pill(f, "ok", "ok");
         fprintf(f, "</td></tr>\n");
     }
     fprintf(f, "</table></div>\n");
@@ -239,8 +240,9 @@ int export_executive_report_html(const Company *c, const char *filename) {
                 html_escape(f, m->name);
                 fprintf(f, "</td><td>day %d</td>", m->deadline_day);
                 if (fc >= 0) fprintf(f, "<td>day %d</td>", fc); else fprintf(f, "<td>-</td>");
-                fprintf(f, "<td><span class=\"pill %s\">%s</span></td></tr>\n",
-                        pill, milestone_status_label(st));
+                fprintf(f, "<td>");
+                html_pill(f, pill, milestone_status_label(st));
+                fprintf(f, "</td></tr>\n");
             }
         }
         fprintf(f, "</table></div>\n");
@@ -249,7 +251,7 @@ int export_executive_report_html(const Company *c, const char *filename) {
     html_doc_close(f);
     fclose(f);
     printf("  Saved: %s\n", filename);
-    html_open_in_browser(filename);
+    open_in_default_app(filename);
     return 1;
 }
 
@@ -269,6 +271,6 @@ int export_report_html(const Project *p, const Company *c, const char *filename)
     fclose(f);
 
     printf("  Saved: %s\n", filename);
-    html_open_in_browser(filename);
+    open_in_default_app(filename);
     return 1;
 }
