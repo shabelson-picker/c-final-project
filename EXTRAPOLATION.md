@@ -1,9 +1,5 @@
 # Project Mayhem Management - Extrapolation
 
-Written at the end of the `solo-ran` autonomous run, after roadmap items 0-7 were
-implemented and tested. This is an honest forward-look: where the product goes
-next, grounded in limitations actually observed in the code (not a wishlist).
-
 ## Where the system stands
 A single-company, multi-project planner with CPM scheduling (topo + forward/backward
 pass, PERT, critical path), greedy member assignment with three policies, a

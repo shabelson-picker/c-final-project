@@ -61,15 +61,12 @@ classDiagram
         +uint32 skills
         +float availability
         +DynamicIntArray project_ids  (derived)
-        +TaskRefArray tasks  (derived)
     }
     class DynamicIntArray {
         +int* data
         +int count / capacity  (doubling)
         +sort_insert / find_index (bsearch)
     }
-    class TaskRefArray { +TaskRef* data; +int count/capacity }
-    class TaskRef { +int project_id; +int task_id }
     class Date { +int year/month/day }
     class Role {
         +char name[]
@@ -104,10 +101,8 @@ classDiagram
     Task o-- "1" TeamMember : assignee_id
     Milestone "1" o-- "many" Task : task_ids (IDs)
     TeamMember "1" o-- "1" DynamicIntArray : project_ids (derived)
-    TeamMember "1" *-- "1" TaskRefArray : tasks
     TeamMember ..> Skill : skills
     TeamMember ..> Role : role name
-    TaskRefArray "1" *-- "many" TaskRef
     Role "1" o-- "many" Privilege : privs
     Project ..> Date
 ```
