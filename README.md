@@ -19,14 +19,14 @@ fin-project/                    ← base: implementation + submission
 ├── mayhem_demo/  my_companies/ ← sample saved company bundles (the app's data files)
 ├── x64/                        ← build output (safe to delete)
 ├── roles.cfg                   ← runtime role / privilege configuration
-├── מטלה מסכמת … .pdf           ← assignment brief
 └── SUBMISSION_DOCUMENTS/
     ├── PRESENTATION.md / .pdf   ← project presentation (Part B)
     ├── AI_USAGE.md / .pdf       ← AI-usage declaration
     ├── diagrams/               ← Graphviz / Mermaid diagram sources used in the presentation
     └── appendix/               ← supporting documents
         (ARCHITECTURE_AND_ALGORITHMS, EXECUTIVE_OVERVIEW, EXTRAPOLATION,
-         SOLO_LOG, TODO_TO_100, assignment, design-brief, diagrams)
+         SOLO_LOG, TODO_TO_100, assignment, design-brief, diagrams,
+         and the assignment brief PDF)
 ```
 
 ---
