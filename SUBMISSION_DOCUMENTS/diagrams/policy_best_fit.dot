@@ -1,0 +1,15 @@
+digraph policy_best_fit {
+  rankdir=TB;
+  graph [fontname="Helvetica", label="Assignment Policy 3/3: Best Skill-Fit (specialists first)", labelloc=t, fontsize=15];
+  node [shape=box, fontname="Helvetica", fontsize=10, style="filled,rounded", fillcolor="#eef4ff"];
+  edge [fontname="Helvetica", fontsize=9, color="#555555"];
+
+  cand [shape=record, fillcolor="#f7f9fc",
+        label="{shared candidates - all qualified for a BACKEND task|Spec   surplus=0  free_day=8  load=2|Free   surplus=2  free_day=1  load=5|Light  surplus=1  free_day=4  load=0}"];
+  key  [label="score_key (lexicographic, lower wins):\n[ surplus, free_day, load, id ]\nsurplus = popcount(skills & ~required)", fillcolor="#cfe0ff"];
+  pick [label="primary = surplus -> min is Spec (0)\nPICK: Spec (the specialist)", fillcolor="#d8f5d8"];
+  note [shape=note, fillcolor="#fffbe6",
+        label="Use: assign the tightest skill match (fewest\nwasted extra skills), keeping multi-skilled\ngeneralists free for tasks only they can do."];
+
+  cand -> key -> pick -> note;
+}

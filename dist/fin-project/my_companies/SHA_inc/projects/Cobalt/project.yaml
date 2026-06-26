@@ -1,0 +1,321 @@
+meta:
+  name: "Cobalt"
+  year: 2026
+  month: 6
+  day: 1
+  member_ids: [2, 3, 5, 8, 10, 11]
+
+tasks:
+  -
+    id: 14
+    title: "Data Model"
+    description: "schema & contracts"
+    status: 2
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.2000
+    required_skills: 2
+    assignee_id: 10
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 0
+    sched_end: 3
+    slack: 8
+    is_critical: 0
+    topo_order: 1
+    pre: []
+    post: [15]
+    alt: []
+    work_pre: []
+  -
+    id: 15
+    title: "Source Connectors"
+    description: "ingest adapters"
+    status: 1
+    pert_min: 3.0000
+    pert_likely: 5.0000
+    pert_max: 8.0000
+    risk: 0.4000
+    required_skills: 2
+    assignee_id: 10
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 3
+    sched_end: 8
+    slack: 8
+    is_critical: 0
+    topo_order: 2
+    pre: [14]
+    post: [16]
+    alt: []
+    work_pre: []
+  -
+    id: 16
+    title: "Ingest Service"
+    description: "buffering & retries"
+    status: 1
+    pert_min: 4.0000
+    pert_likely: 6.0000
+    pert_max: 10.0000
+    risk: 0.4000
+    required_skills: 2
+    assignee_id: 3
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 8
+    sched_end: 14
+    slack: 8
+    is_critical: 0
+    topo_order: 3
+    pre: [15]
+    post: [17]
+    alt: []
+    work_pre: []
+  -
+    id: 17
+    title: "Transform Jobs"
+    description: "ETL & enrichment"
+    status: 0
+    pert_min: 4.0000
+    pert_likely: 6.0000
+    pert_max: 9.0000
+    risk: 0.4000
+    required_skills: 2
+    assignee_id: 10
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 14
+    sched_end: 20
+    slack: 8
+    is_critical: 0
+    topo_order: 4
+    pre: [16]
+    post: [18, 19]
+    alt: []
+    work_pre: []
+  -
+    id: 18
+    title: "Data Quality"
+    description: "validation rules"
+    status: 0
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.3000
+    required_skills: 16
+    assignee_id: 10
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 20
+    sched_end: 23
+    slack: 15
+    is_critical: 0
+    topo_order: 5
+    pre: [17]
+    post: [23]
+    alt: []
+    work_pre: []
+  -
+    id: 19
+    title: "Warehouse Load"
+    description: "load & partitioning"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 4.0000
+    pert_max: 7.0000
+    risk: 0.3000
+    required_skills: 2
+    assignee_id: 11
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: 3
+    sched_start: 20
+    sched_end: 24
+    slack: 8
+    is_critical: 0
+    topo_order: 6
+    pre: [17]
+    post: [20, 23]
+    alt: []
+    work_pre: []
+  -
+    id: 20
+    title: "Orchestration"
+    description: "DAG scheduling"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 4.0000
+    pert_max: 7.0000
+    risk: 0.5000
+    required_skills: 32
+    assignee_id: 5
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 32
+    sched_end: 36
+    slack: 0
+    is_critical: 1
+    topo_order: 7
+    pre: [19]
+    post: [21, 22]
+    alt: []
+    work_pre: []
+  -
+    id: 21
+    title: "Monitoring"
+    description: "metrics & alerts"
+    status: 0
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.3000
+    required_skills: 32
+    assignee_id: 5
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 36
+    sched_end: 39
+    slack: 0
+    is_critical: 1
+    topo_order: 9
+    pre: [20]
+    post: [24, 25]
+    alt: []
+    work_pre: []
+  -
+    id: 22
+    title: "Cost Controls"
+    description: "autoscaling"
+    status: 0
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.4000
+    required_skills: 32
+    assignee_id: 5
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 39
+    sched_end: 42
+    slack: 0
+    is_critical: 1
+    topo_order: 12
+    pre: [20]
+    post: [26]
+    alt: []
+    work_pre: [21]
+  -
+    id: 23
+    title: "Reconciliation"
+    description: "QA & audits"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 4.0000
+    pert_max: 6.0000
+    risk: 0.3000
+    required_skills: 16
+    assignee_id: 10
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 24
+    sched_end: 28
+    slack: 14
+    is_critical: 0
+    topo_order: 8
+    pre: [18, 19]
+    post: [26]
+    alt: []
+    work_pre: []
+  -
+    id: 24
+    title: "Runbook & Docs"
+    description: "ops docs"
+    status: 0
+    pert_min: 1.0000
+    pert_likely: 2.0000
+    pert_max: 4.0000
+    risk: 0.2000
+    required_skills: 128
+    assignee_id: 8
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 39
+    sched_end: 41
+    slack: 3
+    is_critical: 0
+    topo_order: 10
+    pre: [21]
+    post: []
+    alt: []
+    work_pre: []
+  -
+    id: 25
+    title: "Dashboards"
+    description: "exec dashboards"
+    status: 0
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.3000
+    required_skills: 64
+    assignee_id: 11
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 39
+    sched_end: 42
+    slack: 2
+    is_critical: 0
+    topo_order: 11
+    pre: [21]
+    post: []
+    alt: []
+    work_pre: []
+  -
+    id: 26
+    title: "General Availability"
+    description: "GA cutover"
+    status: 0
+    pert_min: 1.0000
+    pert_likely: 2.0000
+    pert_max: 4.0000
+    risk: 0.6000
+    required_skills: 32
+    assignee_id: 5
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: 4
+    sched_start: 42
+    sched_end: 44
+    slack: 0
+    is_critical: 1
+    topo_order: 13
+    pre: [23, 22]
+    post: []
+    alt: []
+    work_pre: []
+
+milestones:
+  -
+    id: 3
+    name: "Pipeline MVP"
+    deadline_day: 20
+    priority: 2
+    tasks: [19]
+  -
+    id: 4
+    name: "Cobalt GA"
+    deadline_day: 133
+    priority: 3
+    tasks: [26]

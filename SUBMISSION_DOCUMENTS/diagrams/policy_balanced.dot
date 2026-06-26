@@ -1,0 +1,15 @@
+digraph policy_balanced {
+  rankdir=TB;
+  graph [fontname="Helvetica", label="Assignment Policy 2/3: Balanced Workload", labelloc=t, fontsize=15];
+  node [shape=box, fontname="Helvetica", fontsize=10, style="filled,rounded", fillcolor="#eef4ff"];
+  edge [fontname="Helvetica", fontsize=9, color="#555555"];
+
+  cand [shape=record, fillcolor="#f7f9fc",
+        label="{shared candidates - all qualified for a BACKEND task|Spec   surplus=0  free_day=8  load=2|Free   surplus=2  free_day=1  load=5|Light  surplus=1  free_day=4  load=0}"];
+  key  [label="score_key (lexicographic, lower wins):\n[ load, free_day, surplus, id ]\nload = tasks already assigned this pass", fillcolor="#cfe0ff"];
+  pick [label="primary = load -> min is Light (0)\nPICK: Light", fillcolor="#d8f5d8"];
+  note [shape=note, fillcolor="#fffbe6",
+        label="Use: spread the work. Give the next task to\nthe least-loaded member -> minimizes the\nspread of per-member days (no one swamped)."];
+
+  cand -> key -> pick -> note;
+}

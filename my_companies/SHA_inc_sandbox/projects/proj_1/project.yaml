@@ -1,0 +1,223 @@
+meta:
+  name: "proj_1"
+  year: 2026
+  month: 5
+  day: 30
+  member_ids: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+
+tasks:
+  -
+    id: 10
+    title: "UX Flows"
+    description: "screens & flows"
+    status: 2
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.2000
+    required_skills: 64
+    assignee_id: 6
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 21
+    sched_end: 24
+    slack: 74
+    is_critical: 0
+    topo_order: 1
+    pre: []
+    post: [11, 12, 13]
+    alt: []
+    work_pre: []
+  -
+    id: 11
+    title: "API Contract"
+    description: "mobile BFF"
+    status: 1
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.3000
+    required_skills: 2
+    assignee_id: 7
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 46
+    sched_end: 49
+    slack: 57
+    is_critical: 0
+    topo_order: 2
+    pre: [10]
+    post: [14]
+    alt: []
+    work_pre: []
+  -
+    id: 12
+    title: "iOS Shell"
+    description: "nav & theming"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 5.0000
+    pert_max: 8.0000
+    risk: 0.3000
+    required_skills: 1
+    assignee_id: 6
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 24
+    sched_end: 29
+    slack: 74
+    is_critical: 0
+    topo_order: 3
+    pre: [10]
+    post: [15]
+    alt: []
+    work_pre: []
+  -
+    id: 13
+    title: "Android Shell"
+    description: "nav & theming"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 5.0000
+    pert_max: 8.0000
+    risk: 0.3000
+    required_skills: 1
+    assignee_id: 6
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 29
+    sched_end: 34
+    slack: 74
+    is_critical: 0
+    topo_order: 5
+    pre: [10]
+    post: [15]
+    alt: []
+    work_pre: [12]
+  -
+    id: 14
+    title: "Auth Flow"
+    description: "OAuth + biometric"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 4.0000
+    pert_max: 7.0000
+    risk: 0.4000
+    required_skills: 2
+    assignee_id: 7
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 49
+    sched_end: 53
+    slack: 57
+    is_critical: 0
+    topo_order: 4
+    pre: [11]
+    post: [16]
+    alt: []
+    work_pre: []
+  -
+    id: 15
+    title: "Feature Screens"
+    description: "core features"
+    status: 0
+    pert_min: 4.0000
+    pert_likely: 6.0000
+    pert_max: 9.0000
+    risk: 0.4000
+    required_skills: 1
+    assignee_id: 6
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 34
+    sched_end: 40
+    slack: 74
+    is_critical: 0
+    topo_order: 7
+    pre: [12, 13]
+    post: [17]
+    alt: []
+    work_pre: []
+  -
+    id: 16
+    title: "Push & Offline"
+    description: "notifications"
+    status: 0
+    pert_min: 2.0000
+    pert_likely: 4.0000
+    pert_max: 6.0000
+    risk: 0.4000
+    required_skills: 2
+    assignee_id: 7
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 53
+    sched_end: 57
+    slack: 57
+    is_critical: 0
+    topo_order: 6
+    pre: [14]
+    post: [17]
+    alt: []
+    work_pre: []
+  -
+    id: 17
+    title: "QA Pass"
+    description: "device matrix"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 4.0000
+    pert_max: 6.0000
+    risk: 0.3000
+    required_skills: 16
+    assignee_id: 7
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 57
+    sched_end: 61
+    slack: 57
+    is_critical: 0
+    topo_order: 8
+    pre: [15, 16]
+    post: [18]
+    alt: []
+    work_pre: []
+  -
+    id: 18
+    title: "Store Release"
+    description: "app store submit"
+    status: 0
+    pert_min: 1.0000
+    pert_likely: 2.0000
+    pert_max: 4.0000
+    risk: 0.5000
+    required_skills: 32
+    assignee_id: 5
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: 2
+    sched_start: 118
+    sched_end: 120
+    slack: 0
+    is_critical: 1
+    topo_order: 9
+    pre: [17]
+    post: []
+    alt: []
+    work_pre: []
+
+milestones:
+  -
+    id: 2
+    name: "App v1"
+    deadline_day: 121
+    priority: 3
+    tasks: [18]

@@ -1,0 +1,74 @@
+digraph architecture {
+  rankdir=TB;
+  graph [fontname="Helvetica", label="Project Mayhem Management - Module Architecture",
+         labelloc=t, fontsize=16, compound=true, nodesep=0.35, ranksep=0.7];
+  node  [shape=box, style="filled,rounded", fontname="Helvetica", fontsize=10, fillcolor="#f7f9fc"];
+  edge  [fontname="Helvetica", fontsize=8, color="#888888", arrowsize=0.7];
+
+  /* ---- Application ---- */
+  subgraph cluster_app {
+    label="Application"; style=filled; color="#dbeafe"; fontsize=12; fontname="Helvetica";
+    main [fillcolor="#93c5fd", label="main\n(entry)"];
+    menus [label="menus\n(MenuItem tables + actions)"];
+    sim   [label="sim\n(sandbox)"];
+  }
+
+  /* ---- TUI framework (reusable, domain-agnostic) ---- */
+  subgraph cluster_tui {
+    label="TUI framework (reusable)"; style=filled; color="#dcfce7"; fontsize=12; fontname="Helvetica";
+    tui_framework [fillcolor="#bbf7d0", label="tui_framework\n(input, breadcrumb,\nrun_table_menu / run_checklist)"];
+    ui            [label="ui\n(colour, screen)"];
+    file_browser;
+  }
+
+  /* ---- Reporting & rendering ---- */
+  subgraph cluster_report {
+    label="Reporting & rendering"; style=filled; color="#fef9c3"; fontsize=12; fontname="Helvetica";
+    renderer        [label="renderer\n(Gantt, DAG, portfolio)"];
+    html_builder    [fillcolor="#fde68a", label="html_builder\n(HTML chrome / components)"];
+    report_exporter [label="report_exporter\n(report assembly)"];
+    dot_export      [label="dot_export\n(Graphviz)"];
+    reports         [label="reports\n(workload)"];
+  }
+
+  /* ---- Engine ---- */
+  subgraph cluster_engine {
+    label="Engine"; style=filled; color="#fee2e2"; fontsize=12; fontname="Helvetica";
+    algorithms [fillcolor="#fca5a5", label="algorithms\n(CPM, greedy assign,\nschedule_company)"];
+    persistence;
+    roles [label="roles\n(privileges)"];
+  }
+
+  /* ---- Domain model ---- */
+  subgraph cluster_domain {
+    label="Domain model"; style=filled; color="#ede9fe"; fontsize=12; fontname="Helvetica";
+    company; project; task; team; milestone;
+  }
+
+  /* ---- Foundation ---- */
+  subgraph cluster_base {
+    label="Foundation"; style=filled; color="#eef2f7"; fontsize=12; fontname="Helvetica";
+    dynamic_int_array [label="dynamic_int_array"];
+    util;
+    types [label="types / constants"];
+  }
+
+  /* ---- key dependencies (top -> down) ---- */
+  main -> menus;  main -> tui_framework;
+  menus -> tui_framework;  menus -> algorithms;  menus -> renderer;
+  menus -> report_exporter;  menus -> roles;  menus -> sim;  menus -> file_browser;
+  sim   -> algorithms;  sim -> persistence;  sim -> tui_framework;
+
+  tui_framework -> ui;  tui_framework -> roles;  tui_framework -> util;
+
+  report_exporter -> html_builder;  report_exporter -> renderer;  report_exporter -> dot_export;  report_exporter -> reports;
+  renderer -> ui;
+
+  algorithms  -> company;
+  reports     -> company;
+  persistence -> company;
+
+  company -> project;  company -> team;  project -> task;  project -> milestone;
+  task    -> dynamic_int_array;  company -> dynamic_int_array;
+  company -> util;  task -> types;
+}

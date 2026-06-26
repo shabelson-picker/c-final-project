@@ -1,0 +1,19 @@
+members:
+  -
+    id: 1
+    name: "Alice (Backend)"
+    role: "Backend Dev"
+    skills: 2
+    availability: 1.0000
+  -
+    id: 2
+    name: "Bob (Frontend)"
+    role: "Frontend Dev"
+    skills: 1
+    availability: 1.0000
+  -
+    id: 3
+    name: "Carol (QA)"
+    role: "QA Engineer"
+    skills: 16
+    availability: 1.0000

@@ -3,6 +3,7 @@ x64/
 Debug/
 Release/
 out/
+tests/bin/
 *.obj
 *.pdb
 *.ilk

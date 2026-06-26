@@ -1,0 +1,396 @@
+meta:
+  name: "Apollo"
+  year: 2026
+  month: 6
+  day: 1
+  member_ids: [2, 3, 5, 6, 7, 8, 10]
+
+tasks:
+  -
+    id: 17
+    title: "Requirements"
+    description: "scope & stories"
+    status: 2
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 4.0000
+    risk: 0.1000
+    required_skills: 64
+    assignee_id: 6
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 1
+    sched_end: 4
+    slack: 0
+    is_critical: 1
+    topo_order: 1
+    pre: []
+    post: [18]
+    alt: []
+    work_pre: []
+  -
+    id: 18
+    title: "User Research"
+    description: "interviews"
+    status: 2
+    pert_min: 1.0000
+    pert_likely: 2.0000
+    pert_max: 4.0000
+    risk: 0.1000
+    required_skills: 64
+    assignee_id: 6
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 4
+    sched_end: 6
+    slack: 0
+    is_critical: 1
+    topo_order: 2
+    pre: [17]
+    post: [19]
+    alt: []
+    work_pre: []
+  -
+    id: 19
+    title: "Wireframes"
+    description: "low-fi screens"
+    status: 2
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.2000
+    required_skills: 64
+    assignee_id: 6
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 6
+    sched_end: 9
+    slack: 0
+    is_critical: 1
+    topo_order: 3
+    pre: [18]
+    post: [20]
+    alt: []
+    work_pre: []
+  -
+    id: 20
+    title: "Design System"
+    description: "tokens & components"
+    status: 1
+    pert_min: 3.0000
+    pert_likely: 4.0000
+    pert_max: 7.0000
+    risk: 0.2000
+    required_skills: 64
+    assignee_id: 6
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: 4
+    sched_start: 9
+    sched_end: 13
+    slack: 0
+    is_critical: 1
+    topo_order: 4
+    pre: [19]
+    post: [21, 24]
+    alt: []
+    work_pre: []
+  -
+    id: 21
+    title: "DB Schema"
+    description: "tables & migrations"
+    status: 1
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.3000
+    required_skills: 2
+    assignee_id: 7
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 13
+    sched_end: 16
+    slack: 0
+    is_critical: 1
+    topo_order: 5
+    pre: [20]
+    post: [22]
+    alt: []
+    work_pre: []
+  -
+    id: 22
+    title: "Auth Service"
+    description: "login & sessions"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 5.0000
+    pert_max: 8.0000
+    risk: 0.4000
+    required_skills: 2
+    assignee_id: 7
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 16
+    sched_end: 21
+    slack: 0
+    is_critical: 1
+    topo_order: 7
+    pre: [21]
+    post: [23]
+    alt: []
+    work_pre: []
+  -
+    id: 23
+    title: "REST API"
+    description: "core endpoints"
+    status: 0
+    pert_min: 5.0000
+    pert_likely: 7.0000
+    pert_max: 11.0000
+    risk: 0.4000
+    required_skills: 2
+    assignee_id: 3
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 21
+    sched_end: 28
+    slack: 0
+    is_critical: 1
+    topo_order: 9
+    pre: [22]
+    post: [27]
+    alt: []
+    work_pre: []
+  -
+    id: 24
+    title: "FE Scaffolding"
+    description: "router & state"
+    status: 1
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.2000
+    required_skills: 1
+    assignee_id: 6
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 13
+    sched_end: 16
+    slack: 2
+    is_critical: 0
+    topo_order: 6
+    pre: [20]
+    post: [25]
+    alt: []
+    work_pre: []
+  -
+    id: 25
+    title: "Component Library"
+    description: "shared widgets"
+    status: 0
+    pert_min: 3.0000
+    pert_likely: 4.0000
+    pert_max: 6.0000
+    risk: 0.3000
+    required_skills: 1
+    assignee_id: 3
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 16
+    sched_end: 20
+    slack: 2
+    is_critical: 0
+    topo_order: 8
+    pre: [24]
+    post: [26]
+    alt: []
+    work_pre: []
+  -
+    id: 26
+    title: "Dashboard UI"
+    description: "main screens"
+    status: 0
+    pert_min: 4.0000
+    pert_likely: 6.0000
+    pert_max: 9.0000
+    risk: 0.3000
+    required_skills: 1
+    assignee_id: 6
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 20
+    sched_end: 26
+    slack: 2
+    is_critical: 0
+    topo_order: 10
+    pre: [25]
+    post: [27]
+    alt: []
+    work_pre: []
+  -
+    id: 27
+    title: "API Integration"
+    description: "wire FE to BE"
+    status: 0
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.4000
+    required_skills: 2
+    assignee_id: 7
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 28
+    sched_end: 31
+    slack: 0
+    is_critical: 1
+    topo_order: 11
+    pre: [23, 26]
+    post: [28, 30]
+    alt: []
+    work_pre: []
+  -
+    id: 28
+    title: "E2E Tests"
+    description: "user-flow tests"
+    status: 0
+    pert_min: 2.0000
+    pert_likely: 4.0000
+    pert_max: 6.0000
+    risk: 0.3000
+    required_skills: 16
+    assignee_id: 10
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: 5
+    sched_start: 31
+    sched_end: 35
+    slack: 0
+    is_critical: 1
+    topo_order: 12
+    pre: [27]
+    post: [29]
+    alt: []
+    work_pre: []
+  -
+    id: 29
+    title: "Perf Hardening"
+    description: "profiling & fixes"
+    status: 0
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.3000
+    required_skills: 16
+    assignee_id: 7
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 35
+    sched_end: 38
+    slack: 0
+    is_critical: 1
+    topo_order: 14
+    pre: [28]
+    post: [31]
+    alt: []
+    work_pre: []
+  -
+    id: 30
+    title: "CI/CD Pipeline"
+    description: "build & release"
+    status: 0
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 5.0000
+    risk: 0.3000
+    required_skills: 32
+    assignee_id: 2
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 34
+    sched_end: 37
+    slack: 4
+    is_critical: 0
+    topo_order: 13
+    pre: [27]
+    post: [32]
+    alt: []
+    work_pre: []
+  -
+    id: 31
+    title: "Security Review"
+    description: "pen test & fixes"
+    status: 0
+    pert_min: 2.0000
+    pert_likely: 3.0000
+    pert_max: 6.0000
+    risk: 0.5000
+    required_skills: 2
+    assignee_id: 3
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: -1
+    sched_start: 38
+    sched_end: 41
+    slack: 0
+    is_critical: 1
+    topo_order: 15
+    pre: [29]
+    post: [32]
+    alt: []
+    work_pre: []
+  -
+    id: 32
+    title: "Prod Deploy v1"
+    description: "ship to production"
+    status: 0
+    pert_min: 1.0000
+    pert_likely: 2.0000
+    pert_max: 3.0000
+    risk: 0.5000
+    required_skills: 32
+    assignee_id: 2
+    manually_assigned: 0
+    fixed_time: 0
+    milestone_id: 6
+    sched_start: 41
+    sched_end: 43
+    slack: 0
+    is_critical: 1
+    topo_order: 16
+    pre: [31, 30]
+    post: []
+    alt: []
+    work_pre: []
+
+milestones:
+  -
+    id: 4
+    name: "Design Complete"
+    deadline_day: 20
+    priority: 2
+    tasks: [20]
+  -
+    id: 5
+    name: "Beta"
+    deadline_day: 106
+    priority: 2
+    tasks: [28]
+  -
+    id: 6
+    name: "v1 Release"
+    deadline_day: 109
+    priority: 3
+    tasks: [32]
