@@ -1,0 +1,7 @@
+members:
+  -
+    id: 1
+    name: "Alice"
+    role: "Dev"
+    skills: 0
+    availability: 1.0000
