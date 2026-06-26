@@ -1,0 +1,71 @@
+digraph future {
+  rankdir=TB;
+  graph [fontname="Helvetica", label="Project Mayhem Management - Future-State Architecture (PLANNED, not yet built)", labelloc=t, fontsize=16];
+  node [shape=box, fontname="Helvetica", fontsize=10, style="filled,rounded", fillcolor="#f7f9fc"];
+  edge [fontname="Helvetica", fontsize=9, color="#555555"];
+
+  /* ---- legend ---- */
+  subgraph cluster_legend {
+    label="Legend"; style=dashed; color="#bbbbbb"; fontsize=10;
+    L1 [label="exists today (reused at new scope)", fillcolor="#eef4ff"];
+    L2 [label="NEW / planned", fillcolor="#e6ffe6", color="#3a8a3a", style="filled,rounded,dashed"];
+    L1 -> L2 [style=invis];
+  }
+
+  Company [label="Company\nALL projects + shared member pool", fillcolor="#cfe8ff"];
+
+  /* ---- unified model build (new) ---- */
+  subgraph cluster_model {
+    label="Unified model build (NEW)"; style="filled,dashed"; color="#3a8a3a"; fillcolor="#f3fff3";
+    U1 [label="combine ALL projects ->\none task set on an ABSOLUTE timeline\n(anchor: date_to_days(start_date) + offset)", fillcolor="#e6ffe6"];
+    U2 [label="global resource set\n(members = one shared pool)", fillcolor="#e6ffe6"];
+    U3 [label="cross-project work_pre edges\nkeyed by TaskRef(project_id, task_id)", fillcolor="#e6ffe6"];
+    U1 -> U2 -> U3;
+  }
+  Company -> U1;
+
+  /* ---- company-scale scheduler (CPM reused at portfolio scope) ---- */
+  subgraph cluster_sched {
+    label="Company-scale scheduler (CPM reused at portfolio scope)"; style=filled; color="#fff4e6";
+    G1 [label="global topo_sort\n(within-project DAGs = independent components)", fillcolor="#eef4ff"];
+    G2 [label="forward / backward pass\non the absolute timeline\n(per-task min_start hack removed)", fillcolor="#eef4ff"];
+    G3 [label="global assignment\nfind_best_member over GLOBAL member load", fillcolor="#eef4ff"];
+    G4 [label="resolve_resource_overlaps -\nCOMPANY-WIDE, interval-aware (EXACT)\nsubsumes the coarse cross-project floor",
+        fillcolor="#e6ffe6", style="filled,rounded,dashed", color="#3a8a3a"];
+    G1 -> G2 -> G3 -> G4;
+  }
+  U3 -> G1;
+
+  /* ---- staffing options feeding assignment ---- */
+  subgraph cluster_staff {
+    label="Staffing options -> assignment"; style=dashed; color="#999999";
+    St1 [label="on-roster member", fillcolor="#eef4ff"];
+    St2 [label="hire from company\n(off-roster -> joins the pool)", fillcolor="#eef4ff"];
+    St3 [label="SUBCONTRACTOR (NEW)\ntemp, external,\nEXCLUSIVE to one task",
+         fillcolor="#e6ffe6", style="filled,rounded,dashed", color="#3a8a3a"];
+  }
+  St1 -> G3 [style=dotted, label="feeds"];
+  St2 -> G3 [style=dotted];
+  St3 -> G3 [style=dotted];
+
+  /* ---- preemption layer (Subtask segments) ---- */
+  subgraph cluster_preempt {
+    label="Preemption layer (NEW - Subtask segments)"; style="filled,dashed"; color="#3a8a3a"; fillcolor="#f3fff3";
+    P1 [label="detect task straddling a\nvacation / member free-gap\n(gap = time-shared assignee)", fillcolor="#e6ffe6"];
+    P2 [label="split into schedule-time SEGMENTS\n(lightweight leaf list on the task)", fillcolor="#e6ffe6"];
+    P3 [label="schedule the flattened LEAVES", fillcolor="#e6ffe6"];
+    P4 [label="merge adjacent contiguous segments", fillcolor="#e6ffe6"];
+    P1 -> P2 -> P3 -> P4;
+  }
+  G2 -> P1 [style=dotted, label="during pass"];
+  P4 -> G4 [style=dotted];
+
+  /* ---- outputs ---- */
+  O1 [label="Company / Portfolio Gantt\n(PRIMARY view)", fillcolor="#d8f5d8"];
+  O2 [label="per-project Gantt\n(derived view)", fillcolor="#d8f5d8"];
+  O3 [label="cost / budget rollup (NEW)\n(driven by subcontractors)",
+      fillcolor="#e6ffe6", style="filled,rounded,dashed", color="#3a8a3a"];
+  G4 -> O1;
+  G4 -> O2;
+  G4 -> O3;
+}
