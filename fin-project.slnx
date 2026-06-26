@@ -3,5 +3,5 @@
     <Platform Name="x64" />
     <Platform Name="x86" />
   </Configurations>
-  <Project Path="fin-project/fin-project.vcxproj" Id="44349f22-8c89-4453-b23d-50604417254f" />
+  <Project Path="fin-project-vs2022/fin-project.vcxproj" Id="44349f22-8c89-4453-b23d-50604417254f" />
 </Solution>
